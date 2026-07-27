@@ -188,6 +188,11 @@
     border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
     cursor: pointer; font-family: inherit;
   }
+  .btn-edit {
+    padding: 6px 12px; background: #E3F2FD; color: #1565C0;
+    border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
 
   /* ===== 表格 ===== */
   .table-section {
@@ -925,6 +930,12 @@
     </div>
     <button class="btn-primary" onclick="saveWeightRecord()">保存记录</button>
   </div>
+</div>
+
+<!-- 体重照片查看器 -->
+<div id="weightPhotoViewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;" onclick="closeWeightPhotoViewer()">
+  <img id="weightPhotoViewerImg" style="max-width:100%;max-height:85vh;object-fit:contain;">
+  <button onclick="closeWeightPhotoViewer()" style="position:absolute;top:calc(20px + var(--safe-top));right:16px;background:rgba(255,255,255,0.2);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">×</button>
 </div>
 <div class="page" id="page-photos">
   <div class="nav-header">
@@ -1733,6 +1744,7 @@ function viewPhoto(id, type) {
 
 // ==================== 体重页面 ====================
 let weightPhotoData = '';
+let editingWeightId = null;
 
 function renderWeightPage() {
   const data = getData();
@@ -1812,6 +1824,7 @@ function renderWeightPage() {
         ${photoHtml}
         ${noteHtml}
         <div class="wt-actions">
+          <button class="btn-edit" onclick="editWeightRecord(${r.id})">编辑</button>
           <button class="btn-danger" onclick="deleteWeightRecord(${r.id})">删除</button>
         </div>
       </div>`;
@@ -1885,6 +1898,7 @@ function drawWeightChart(records) {
 }
 
 function openWeightForm() {
+  editingWeightId = null;
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   document.getElementById('weightFormDate').value = dateStr;
@@ -1892,10 +1906,32 @@ function openWeightForm() {
   document.getElementById('weightFormNote').value = '';
   weightPhotoData = '';
   resetPhotoPreview('weightPhotoPreview', '📷', '点击上传照片（可选）');
+  document.querySelector('#weightModal .modal-title').textContent = '记录体重';
+  document.getElementById('weightModal').classList.add('active');
+}
+
+function editWeightRecord(id) {
+  const data = getData();
+  const r = (data.weightRecords || []).find(x => x.id == id);
+  if (!r) return;
+  editingWeightId = id;
+  document.getElementById('weightFormDate').value = r.date;
+  document.getElementById('weightFormValue').value = r.value;
+  document.getElementById('weightFormNote').value = r.note || '';
+  weightPhotoData = r.photo || '';
+  if (r.photo) {
+    const el = document.getElementById('weightPhotoPreview');
+    el.classList.add('has-image');
+    el.innerHTML = `<img src="${r.photo}">`;
+  } else {
+    resetPhotoPreview('weightPhotoPreview', '📷', '点击上传照片（可选）');
+  }
+  document.querySelector('#weightModal .modal-title').textContent = '编辑体重记录';
   document.getElementById('weightModal').classList.add('active');
 }
 
 function closeWeightForm() {
+  editingWeightId = null;
   document.getElementById('weightModal').classList.remove('active');
 }
 
@@ -1927,15 +1963,30 @@ function saveWeightRecord() {
   const data = getData();
   if (!data.weightRecords) data.weightRecords = [];
 
-  data.weightRecords.unshift({
-    id: Date.now(), date, value, note, photo: weightPhotoData, createdAt: Date.now()
-  });
+  if (editingWeightId) {
+    const r = data.weightRecords.find(x => x.id == editingWeightId);
+    if (r) {
+      r.date = date;
+      r.value = value;
+      r.note = note;
+      r.photo = weightPhotoData;
+    }
+    data.weightRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+    saveData(data);
+    closeWeightForm();
+    renderWeightPage();
+    showToast('记录已更新');
+  } else {
+    data.weightRecords.unshift({
+      id: Date.now(), date, value, note, photo: weightPhotoData, createdAt: Date.now()
+    });
 
-  data.weightRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-  saveData(data);
-  closeWeightForm();
-  renderWeightPage();
-  showToast('记录已保存');
+    data.weightRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+    saveData(data);
+    closeWeightForm();
+    renderWeightPage();
+    showToast('记录已保存');
+  }
 }
 
 function deleteWeightRecord(id) {
@@ -1951,8 +2002,12 @@ function viewWeightPhoto(id) {
   const data = getData();
   const r = (data.weightRecords || []).find(x => x.id == id);
   if (!r || !r.photo) return;
-  const w = window.open('', '_blank');
-  w.document.write(`<title>查看照片</title><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${r.photo}" style="max-width:100%;max-height:100vh;"></body>`);
+  document.getElementById('weightPhotoViewerImg').src = r.photo;
+  document.getElementById('weightPhotoViewer').style.display = 'flex';
+}
+
+function closeWeightPhotoViewer() {
+  document.getElementById('weightPhotoViewer').style.display = 'none';
 }
 
 // ==================== 相册页面 ====================
