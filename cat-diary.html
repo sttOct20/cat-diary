@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>🐱 猫咪日记</title>
+<style>
+  :root {
+    --cream: #FFF5E6;
+    --cream-light: #FFF9F0;
+    --cream-dark: #F0DFC0;
+    --calico-orange: #D4896A;
+    --calico-orange-light: #E8A87C;
+    --calico-brown: #8B6E5A;
+    --calico-dark: #6B5240;
+    --white: #FFFFFF;
+    --white-soft: #FEFCF8;
+    --paw-pink: #F2C4C4;
+    --paw-pink-light: #FAD9D9;
+    --text-primary: #4A3728;
+    --text-secondary: #8B7355;
+    --text-muted: #B8A08A;
+    --shadow-soft: 0 2px 12px rgba(139, 110, 90, 0.08);
+    --shadow-card: 0 4px 20px rgba(139, 110, 90, 0.12);
+    --shadow-btn: 0 4px 16px rgba(212, 137, 106, 0.3);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --radius-lg: 24px;
+    --safe-top: env(safe-area-inset-top, 20px);
+    --safe-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    background: var(--cream);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding-bottom: calc(80px + var(--safe-bottom));
+    overflow-x: hidden;
+  }
+
+  /* ===== 顶部 Header ===== */
+  .header {
+    background: linear-gradient(135deg, var(--calico-orange-light) 0%, var(--calico-orange) 50%, var(--calico-brown) 100%);
+    padding: calc(var(--safe-top) + 16px) 20px 28px;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -20px;
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    left: -10px;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 50%;
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header-greeting {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 400;
+  }
+
+  .header-date {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.15);
+    padding: 4px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+  }
+
+  .cat-profile {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cat-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--cream);
+    border: 3px solid rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+  }
+
+  .cat-info h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 0.5px;
+  }
+
+  .cat-info p {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 4px;
+  }
+
+  /* ===== 统计概览 ===== */
+  .stats-bar {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+    margin: -14px 16px 16px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .stat-item {
+    flex: 1;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 14px 12px;
+    text-align: center;
+    box-shadow: var(--shadow-card);
+  }
+
+  .stat-icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--calico-orange);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* ===== 提醒横幅 ===== */
+  .reminder-banner {
+    margin: 0 16px 20px;
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE8CC 100%);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow-soft);
+    border-left: 4px solid var(--calico-orange);
+  }
+
+  .reminder-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .reminder-content {
+    flex: 1;
+  }
+
+  .reminder-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--calico-dark);
+  }
+
+  .reminder-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .reminder-action {
+    background: var(--calico-orange);
+    color: var(--white);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* ===== 快捷操作区 ===== */
+  .quick-actions {
+    padding: 0 16px 20px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    padding-left: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 18px;
+    background: var(--calico-orange);
+    border-radius: 2px;
+  }
+
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .action-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 20px 12px;
+    text-align: center;
+    box-shadow: var(--shadow-soft);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .action-card:active {
+    transform: scale(0.96);
+    box-shadow: var(--shadow-card);
+  }
+
+  .action-card .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .action-card .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .action-card .badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #FF6B6B;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== 记录区域 ===== */
+  .records-section {
+    padding: 0 16px;
+    margin-bottom: 20px;
+  }
+
+  .record-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-soft);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .record-card:active {
+    transform: scale(0.98);
+  }
+
+  .record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .record-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .record-icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .record-icon-circle.sand {
+    background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+  }
+
+  .record-icon-circle.deworm {
+    background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+  }
+
+  .record-icon-circle.hairball {
+    background: linear-gradient(135deg, #FCE4EC, #F8BBD0);
+  }
+
+  .record-icon-circle.can {
+    background: linear-gradient(135deg, #FFF5E6, #FFE4CC);
+  }
+
+  .record-icon-circle.weight {
+    background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+  }
+
+  .record-icon-circle.photo {
+    background: linear-gradient(135deg, #F3E5F5, #E1BEE7);
+  }
+
+  .record-title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .record-arrow {
+    color: var(--text-muted);
+    font-size: 18px;
+  }
+
+  .record-meta {
+    display: flex;
+    gap: 16px;
+    padding: 12px 0 0;
+    border-top: 1px dashed var(--cream-dark);
+  }
+
+  .meta-item {
+    flex: 1;
+    text-align: center;
+  }
+
+  .meta-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .meta-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .meta-value.upcoming {
+    color: var(--calico-orange);
+    font-weight: 700;
+  }
+
+  .meta-value.overdue {
+    color: #FF6B6B;
+  }
+
+  /* ===== 最近动态 ===== */
+  .recent-section {
+    padding: 0 16px;
+    margin-bottom: 20px;
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: var(--cream-dark);
+    border-radius: 1px;
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 16px;
+    padding: 14px;
+    background: var(--white);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .timeline-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 18px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--calico-orange);
+    border: 2px solid var(--cream);
+  }
+
+  .timeline-date {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .timeline-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .timeline-emoji {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .timeline-text {
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  .timeline-text strong {
+    color: var(--calico-orange);
+  }
+
+  /* ===== 猫咪相册入口 ===== */
+  .photo-gallery-entry {
+    margin: 0 16px 20px;
+    background: linear-gradient(135deg, var(--cream) 0%, var(--cream-dark) 100%);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-soft);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .photo-gallery-entry::before {
+    content: '📷';
+    position: absolute;
+    right: -5px;
+    bottom: -15px;
+    font-size: 80px;
+    opacity: 0.15;
+    transform: rotate(-15deg);
+  }
+
+  .photo-preview-stack {
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+    position: relative;
+    width: 70px;
+    height: 70px;
+  }
+
+  .photo-preview-stack .photo-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid var(--white);
+    box-shadow: var(--shadow-soft);
+    position: absolute;
+  }
+
+  .photo-preview-stack .photo-thumb:nth-child(1) {
+    top: 0; left: 0; z-index: 3;
+  }
+
+  .photo-preview-stack .photo-thumb:nth-child(2) {
+    top: 7px; left: 7px; z-index: 2;
+    background: var(--paw-pink-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .photo-preview-stack .photo-thumb:nth-child(3) {
+    top: 14px; left: 14px; z-index: 1;
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .photo-gallery-info h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .photo-gallery-info p {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* ===== 底部导航 ===== */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    padding: 8px 0 calc(8px + var(--safe-bottom));
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 -2px 20px rgba(139, 110, 90, 0.08);
+    z-index: 100;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    padding: 4px 12px;
+    transition: all 0.2s;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+
+  .tab-item:active {
+    transform: scale(0.9);
+  }
+
+  .tab-icon {
+    font-size: 22px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+  }
+
+  .tab-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .tab-item.active .tab-label {
+    color: var(--calico-orange);
+    font-weight: 700;
+  }
+
+  /* ===== 浮动添加按钮 ===== */
+  .fab {
+    position: fixed;
+    bottom: calc(90px + var(--safe-bottom));
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--calico-orange) 0%, var(--calico-brown) 100%);
+    color: white;
+    border: none;
+    font-size: 28px;
+    box-shadow: var(--shadow-btn);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    transition: all 0.2s;
+  }
+
+  .fab:active {
+    transform: scale(0.92);
+  }
+
+  /* ===== 空状态样式 ===== */
+  .empty-placeholder {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ===== 动画 ===== */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .action-card { animation: fadeInUp 0.4s ease both; }
+  .action-card:nth-child(1) { animation-delay: 0.05s; }
+  .action-card:nth-child(2) { animation-delay: 0.1s; }
+  .action-card:nth-child(3) { animation-delay: 0.15s; }
+  .action-card:nth-child(4) { animation-delay: 0.2s; }
+  .action-card:nth-child(5) { animation-delay: 0.25s; }
+  .action-card:nth-child(6) { animation-delay: 0.3s; }
+
+  .record-card { animation: fadeInUp 0.4s ease both; }
+  .record-card:nth-child(1) { animation-delay: 0.1s; }
+  .record-card:nth-child(2) { animation-delay: 0.15s; }
+  .record-card:nth-child(3) { animation-delay: 0.2s; }
+  .record-card:nth-child(4) { animation-delay: 0.25s; }
+  .record-card:nth-child(5) { animation-delay: 0.3s; }
+
+  .timeline-item { animation: fadeInUp 0.4s ease both; }
+  .timeline-item:nth-child(1) { animation-delay: 0.1s; }
+  .timeline-item:nth-child(2) { animation-delay: 0.2s; }
+  .timeline-item:nth-child(3) { animation-delay: 0.3s; }
+</style>
+</head>
+<body>
+
+  <!-- ===== 顶部 ===== -->
+  <div class="header">
+    <div class="header-top">
+      <span class="header-greeting">🐾 猫咪日记</span>
+      <span class="header-date" id="todayDate"></span>
+    </div>
+    <div class="cat-profile">
+      <div class="cat-avatar">🐱</div>
+      <div class="cat-info">
+        <h1>小奶油</h1>
+        <p>淡奶油三花 · 记录每一天</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 统计概览 ===== -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-icon">📏</div>
+      <div class="stat-value" id="statWeight">4.2</div>
+      <div class="stat-label">当前体重(kg)</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-icon">🥫</div>
+      <div class="stat-value" id="statCans">12</div>
+      <div class="stat-label">本月罐头</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-icon">📸</div>
+      <div class="stat-value" id="statPhotos">28</div>
+      <div class="stat-label">可爱照片</div>
+    </div>
+  </div>
+
+  <!-- ===== 提醒横幅 ===== -->
+  <div class="reminder-banner" id="reminderBanner">
+    <span class="reminder-icon">🔔</span>
+    <div class="reminder-content">
+      <div class="reminder-title" id="reminderTitle">该换猫砂啦！</div>
+      <div class="reminder-desc" id="reminderDesc">已过预计更换日期 2 天</div>
+    </div>
+    <button class="reminder-action" onclick="showToast('已标记为已完成')">完成</button>
+  </div>
+
+  <!-- ===== 快捷操作 ===== -->
+  <div class="quick-actions">
+    <div class="section-title">快捷记录</div>
+    <div class="action-grid">
+      <div class="action-card" onclick="showToast('换猫砂记录')">
+        <span class="icon">🧹</span>
+        <span class="label">换猫砂</span>
+        <span class="badge" id="sandBadge" style="display:none">!</span>
+      </div>
+      <div class="action-card" onclick="showToast('驱虫记录')">
+        <span class="icon">💊</span>
+        <span class="label">驱虫</span>
+        <span class="badge" id="dewormBadge" style="display:none">!</span>
+      </div>
+      <div class="action-card" onclick="showToast('化毛膏记录')">
+        <span class="icon">🩷</span>
+        <span class="label">化毛膏</span>
+      </div>
+      <div class="action-card" onclick="showToast('罐头记录')">
+        <span class="icon">🥫</span>
+        <span class="label">罐头</span>
+      </div>
+      <div class="action-card" onclick="showToast('体重记录')">
+        <span class="icon">⚖️</span>
+        <span class="label">体重</span>
+      </div>
+      <div class="action-card" onclick="showToast('上传照片')">
+        <span class="icon">📷</span>
+        <span class="label">照片</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 记录卡片区域 ===== -->
+  <div class="records-section">
+    <div class="section-title">管理记录</div>
+
+    <!-- 换猫砂 -->
+    <div class="record-card" onclick="showToast('查看换猫砂记录')">
+      <div class="record-header">
+        <div class="record-header-left">
+          <div class="record-icon-circle sand">🧹</div>
+          <span class="record-title">换猫砂</span>
+        </div>
+        <span class="record-arrow">›</span>
+      </div>
+      <div class="record-meta">
+        <div class="meta-item">
+          <div class="meta-label">上次更换</div>
+          <div class="meta-value">07-20</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">上次用量</div>
+          <div class="meta-value">2 包</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">下次提醒</div>
+          <div class="meta-value upcoming">07-25 🔔</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 驱虫 -->
+    <div class="record-card" onclick="showToast('查看驱虫记录')">
+      <div class="record-header">
+        <div class="record-header-left">
+          <div class="record-icon-circle deworm">💊</div>
+          <span class="record-title">驱虫记录</span>
+        </div>
+        <span class="record-arrow">›</span>
+      </div>
+      <div class="record-meta">
+        <div class="meta-item">
+          <div class="meta-label">上次驱虫</div>
+          <div class="meta-value">07-01</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">上次类型</div>
+          <div class="meta-value">内外同驱</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">下次提醒</div>
+          <div class="meta-value upcoming">08-01 🔔</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 化毛膏 -->
+    <div class="record-card" onclick="showToast('查看化毛膏记录')">
+      <div class="record-header">
+        <div class="record-header-left">
+          <div class="record-icon-circle hairball">🩷</div>
+          <span class="record-title">化毛膏</span>
+        </div>
+        <span class="record-arrow">›</span>
+      </div>
+      <div class="record-meta">
+        <div class="meta-item">
+          <div class="meta-label">上次喂食</div>
+          <div class="meta-value">07-26</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">上次剂量</div>
+          <div class="meta-value">3cm</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">累计次数</div>
+          <div class="meta-value">本月 8 次</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 罐头记录 -->
+    <div class="record-card" onclick="showToast('查看罐头记录')">
+      <div class="record-header">
+        <div class="record-header-left">
+          <div class="record-icon-circle can">🥫</div>
+          <span class="record-title">罐头记录</span>
+        </div>
+        <span class="record-arrow">›</span>
+      </div>
+      <div class="record-meta">
+        <div class="meta-item">
+          <div class="meta-label">最近吃</div>
+          <div class="meta-value">今天</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">最爱口味</div>
+          <div class="meta-value">鸡肉味</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">累计罐头</div>
+          <div class="meta-value">12 个</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 体重 -->
+    <div class="record-card" onclick="showToast('查看体重记录')">
+      <div class="record-header">
+        <div class="record-header-left">
+          <div class="record-icon-circle weight">⚖️</div>
+          <span class="record-title">体重记录</span>
+        </div>
+        <span class="record-arrow">›</span>
+      </div>
+      <div class="record-meta">
+        <div class="meta-item">
+          <div class="meta-label">最近称重</div>
+          <div class="meta-value">07-25</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">当前体重</div>
+          <div class="meta-value">4.2 kg</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">变化趋势</div>
+          <div class="meta-value" style="color:#4CAF50">+0.1 ↗</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 猫咪相册 ===== -->
+  <div class="photo-gallery-entry" onclick="showToast('打开猫咪相册')">
+    <div class="photo-preview-stack">
+      <div class="photo-thumb">🐱</div>
+      <div class="photo-thumb">🐾</div>
+      <div class="photo-thumb">✨</div>
+    </div>
+    <div class="photo-gallery-info">
+      <h3>猫咪相册</h3>
+      <p>记录小奶油的可爱瞬间</p>
+    </div>
+  </div>
+
+  <!-- ===== 最近动态 ===== -->
+  <div class="recent-section">
+    <div class="section-title">最近动态</div>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-date">今天 09:30</div>
+        <div class="timeline-content">
+          <span class="timeline-emoji">🥫</span>
+          <span class="timeline-text">吃了 <strong>皇家鸡肉味罐头</strong> 85g，<strong>很爱吃</strong>！</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-date">昨天 20:15</div>
+        <div class="timeline-content">
+          <span class="timeline-emoji">🩷</span>
+          <span class="timeline-text">喂了化毛膏，剂量 <strong>3cm</strong></span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-date">07-25 18:00</div>
+        <div class="timeline-content">
+          <span class="timeline-emoji">⚖️</span>
+          <span class="timeline-text">体重 <strong>4.2kg</strong>，比上次重了0.1kg</span>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-date">07-20 10:00</div>
+        <div class="timeline-content">
+          <span class="timeline-emoji">🧹</span>
+          <span class="timeline-text">换了猫砂 <strong>2包</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 浮动添加按钮 ===== -->
+  <button class="fab" onclick="showToast('快速添加记录')">+</button>
+
+  <!-- ===== 底部导航 ===== -->
+  <div class="tab-bar">
+    <button class="tab-item active">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">首页</span>
+    </button>
+    <button class="tab-item">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">记录</span>
+    </button>
+    <button class="tab-item">
+      <span class="tab-icon">📷</span>
+      <span class="tab-label">相册</span>
+    </button>
+    <button class="tab-item">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">设置</span>
+    </button>
+  </div>
+
+  <!-- ===== Toast 提示 ===== -->
+  <div id="toast" style="
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(74, 55, 40, 0.85);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+  "></div>
+
+  <script>
+    // 显示今天日期
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+    document.getElementById('todayDate').textContent = `${dateStr} 周${weekDays[now.getDay()]}`;
+
+    // Toast 提示
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      toast.style.transform = 'translate(-50%, -50%) scale(1)';
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translate(-50%, -50%) scale(0.8)';
+      }, 1500);
+    }
+  </script>
+</body>
+</html>

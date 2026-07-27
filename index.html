@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="猫咪日记">
+<meta name="theme-color" content="#D4896A">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%23D4896A' width='192' height='192' rx='36'/%3E%3Ctext x='96' y='125' font-size='100' text-anchor='middle'%3E🐱%3C/text%3E%3C/svg%3E">
+<title>猫咪日记</title>
+<style>
+  :root {
+    --cream: #FFF5E6;
+    --cream-light: #FFF9F0;
+    --cream-dark: #F0DFC0;
+    --calico-orange: #D4896A;
+    --calico-orange-light: #E8A87C;
+    --calico-brown: #8B6E5A;
+    --calico-dark: #6B5240;
+    --white: #FFFFFF;
+    --white-soft: #FEFCF8;
+    --paw-pink: #F2C4C4;
+    --paw-pink-light: #FAD9D9;
+    --text-primary: #4A3728;
+    --text-secondary: #8B7355;
+    --text-muted: #B8A08A;
+    --danger: #FF6B6B;
+    --success: #4CAF50;
+    --shadow-soft: 0 2px 12px rgba(139, 110, 90, 0.08);
+    --shadow-card: 0 4px 20px rgba(139, 110, 90, 0.12);
+    --shadow-btn: 0 4px 16px rgba(212, 137, 106, 0.3);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --radius-lg: 24px;
+    --safe-top: env(safe-area-inset-top, 20px);
+    --safe-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    background: var(--cream);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== 页面容器 ===== */
+  .page { display: none; min-height: 100vh; padding-bottom: calc(20px + var(--safe-bottom)); }
+  .page.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ===== 顶部导航栏 ===== */
+  .nav-header {
+    background: linear-gradient(135deg, var(--calico-orange-light) 0%, var(--calico-orange) 50%, var(--calico-brown) 100%);
+    padding: calc(var(--safe-top) + 12px) 16px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .nav-back {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    border: none; color: white; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; backdrop-filter: blur(4px);
+  }
+  .nav-title { font-size: 18px; font-weight: 700; color: white; flex: 1; }
+  .nav-action {
+    background: rgba(255,255,255,0.25); border: none; color: white;
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; backdrop-filter: blur(4px);
+  }
+
+  /* ===== 信息卡片 ===== */
+  .info-card {
+    margin: 16px;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow-soft);
+  }
+  .info-card-title {
+    font-size: 13px; color: var(--text-muted); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .info-row {
+    display: flex; gap: 12px;
+  }
+  .info-item {
+    flex: 1; text-align: center; padding: 12px 8px;
+    background: var(--cream-light); border-radius: var(--radius-sm);
+  }
+  .info-item-label {
+    font-size: 11px; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .info-item-value {
+    font-size: 18px; font-weight: 700; color: var(--calico-orange);
+  }
+  .info-item-value.overdue { color: var(--danger); }
+  .info-item-value.upcoming { color: var(--calico-orange); }
+  .info-item-sub {
+    font-size: 11px; color: var(--text-secondary); margin-top: 4px;
+  }
+
+  /* ===== 提醒横幅 ===== */
+  .reminder-bar {
+    margin: 0 16px 16px;
+    background: linear-gradient(135deg, #FFF3E0, #FFE8CC);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow-soft);
+    border-left: 4px solid var(--calico-orange);
+  }
+  .reminder-bar.hidden { display: none; }
+  .reminder-bar-icon { font-size: 24px; flex-shrink: 0; }
+  .reminder-bar-text { flex: 1; }
+  .reminder-bar-title { font-size: 14px; font-weight: 600; color: var(--calico-dark); }
+  .reminder-bar-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ===== 表单 ===== */
+  .form-section {
+    margin: 0 16px 16px;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow-soft);
+  }
+  .form-title {
+    font-size: 15px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .form-title::before {
+    content: ''; width: 4px; height: 16px;
+    background: var(--calico-orange); border-radius: 2px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 8px;
+  }
+  .form-input, .form-select {
+    width: 100%; padding: 12px 14px;
+    border: 1.5px solid var(--cream-dark);
+    border-radius: var(--radius-sm); font-size: 15px;
+    color: var(--text-primary); background: var(--white-soft);
+    font-family: inherit; -webkit-appearance: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus {
+    outline: none; border-color: var(--calico-orange);
+    background: var(--white);
+  }
+  .form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%238B7355' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .form-hint {
+    font-size: 12px; color: var(--text-muted); margin-top: 6px;
+  }
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--calico-orange) 0%, var(--calico-brown) 100%);
+    color: white; border: none; border-radius: var(--radius-sm);
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: var(--shadow-btn); transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary:active { transform: scale(0.98); opacity: 0.95; }
+  .btn-secondary {
+    width: 100%; padding: 12px;
+    background: var(--cream-light); color: var(--calico-brown);
+    border: 1.5px solid var(--cream-dark); border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-secondary:active { background: var(--cream-dark); }
+  .btn-danger {
+    padding: 6px 12px; background: #FFEBEE; color: var(--danger);
+    border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* ===== 表格 ===== */
+  .table-section {
+    margin: 0 16px 16px;
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow-soft);
+  }
+  .table-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .table-title {
+    font-size: 15px; font-weight: 700; color: var(--text-primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .table-title::before {
+    content: ''; width: 4px; height: 16px;
+    background: var(--calico-orange); border-radius: 2px;
+  }
+  .table-count {
+    font-size: 12px; color: var(--text-muted); font-weight: 500;
+  }
+  .table-row {
+    display: flex; align-items: center; padding: 14px 0;
+    border-bottom: 1px solid var(--cream-dark);
+  }
+  .table-row:last-child { border-bottom: none; }
+  .table-cell-date {
+    flex: 0 0 90px; font-size: 14px; font-weight: 600; color: var(--text-primary);
+  }
+  .table-cell-content {
+    flex: 1; font-size: 13px; color: var(--text-secondary);
+  }
+  .table-cell-content strong {
+    color: var(--calico-orange); font-size: 15px;
+  }
+  .table-cell-action {
+    flex-shrink: 0;
+  }
+  .empty-state {
+    text-align: center; padding: 40px 20px; color: var(--text-muted);
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state-text { font-size: 14px; }
+
+  /* ===== 首页 ===== */
+  .home-header {
+    background: linear-gradient(135deg, var(--calico-orange-light) 0%, var(--calico-orange) 50%, var(--calico-brown) 100%);
+    padding: calc(var(--safe-top) + 16px) 20px 28px;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    position: relative; overflow: hidden;
+  }
+  .home-header-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .home-greeting { font-size: 14px; color: rgba(255,255,255,0.85); }
+  .home-date {
+    font-size: 13px; color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.15); padding: 4px 12px;
+    border-radius: 20px; backdrop-filter: blur(4px);
+  }
+  .home-profile { display: flex; align-items: center; gap: 16px; }
+  .home-avatar {
+    width: 64px; height: 64px; border-radius: 50%; background: var(--cream);
+    border: 3px solid rgba(255,255,255,0.5); display: flex;
+    align-items: center; justify-content: center; font-size: 32px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15); flex-shrink: 0;
+  }
+  .home-cat-name { font-size: 22px; font-weight: 700; color: white; }
+  .home-cat-desc { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+
+  .menu-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    padding: 16px;
+  }
+  .menu-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 20px 16px; text-align: center;
+    box-shadow: var(--shadow-soft); cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .menu-card:active { transform: scale(0.96); }
+  .menu-card-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+  .menu-card-label { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .menu-card-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .menu-card-badge {
+    position: absolute; top: 8px; right: 8px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--danger); color: white;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ===== 模态框 ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(74,55,40,0.5);
+    display: none; align-items: flex-end; justify-content: center;
+    z-index: 200; backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-content {
+    background: var(--white); width: 100%; max-height: 85vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: 20px 16px calc(20px + var(--safe-bottom));
+    overflow-y: auto; animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--cream-light); border: none;
+    font-size: 18px; color: var(--text-secondary); cursor: pointer;
+  }
+
+  /* ===== Toast ===== */
+  #toast {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: rgba(74,55,40,0.88); color: white;
+    padding: 12px 24px; border-radius: 24px;
+    font-size: 14px; font-weight: 500; z-index: 1000;
+    opacity: 0; transition: all 0.3s ease; pointer-events: none;
+    backdrop-filter: blur(10px); white-space: nowrap;
+  }
+
+  /* ===== 安装提示 ===== */
+  .install-tip {
+    position: fixed; bottom: calc(20px + var(--safe-bottom));
+    left: 16px; right: 16px;
+    background: var(--white); border-radius: var(--radius);
+    padding: 16px; box-shadow: var(--shadow-card);
+    z-index: 150; display: none;
+    border: 1px solid var(--cream-dark);
+  }
+  .install-tip.active { display: block; animation: fadeInUp 0.4s ease; }
+  .install-tip-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .install-tip-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+  .install-tip-close {
+    position: absolute; top: 12px; right: 12px;
+    background: none; border: none; font-size: 16px;
+    color: var(--text-muted); cursor: pointer;
+  }
+
+  /* ===== 照片上传 ===== */
+  .photo-upload-area {
+    width: 100%; aspect-ratio: 4/3; max-height: 200px;
+    background: var(--cream-light); border: 2px dashed var(--cream-dark);
+    border-radius: var(--radius-sm); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; cursor: pointer;
+    transition: all 0.2s; overflow: hidden;
+  }
+  .photo-upload-area:active { background: var(--cream-dark); }
+  .photo-preview-placeholder {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; width: 100%; height: 100%;
+  }
+  .photo-preview-placeholder img {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+  }
+  .photo-preview-placeholder.has-image {
+    padding: 0; position: relative;
+  }
+  .photo-preview-placeholder.has-image::after {
+    content: '点击更换'; position: absolute; bottom: 8px; right: 8px;
+    background: rgba(0,0,0,0.6); color: white; font-size: 11px;
+    padding: 4px 10px; border-radius: 12px;
+  }
+
+  /* ===== 罐头时间轴 ===== */
+  .can-timeline { position: relative; padding-left: 28px; }
+  .can-timeline::before {
+    content: ''; position: absolute; left: 9px; top: 12px; bottom: 12px;
+    width: 2px; background: var(--cream-dark); border-radius: 1px;
+  }
+  .can-timeline-item {
+    position: relative; margin-bottom: 16px;
+    background: var(--cream-light); border-radius: var(--radius-sm);
+    overflow: hidden; box-shadow: var(--shadow-soft);
+  }
+  .can-timeline-dot {
+    position: absolute; left: -19px; top: 16px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--calico-orange); border: 2px solid var(--cream);
+    z-index: 1;
+  }
+  .can-timeline-header {
+    padding: 12px 14px 8px; display: flex;
+    justify-content: space-between; align-items: flex-start;
+  }
+  .can-timeline-date { font-size: 12px; color: var(--text-muted); }
+  .can-timeline-name {
+    font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 2px;
+  }
+  .can-timeline-grams {
+    font-size: 13px; color: var(--calico-orange); font-weight: 600; margin-top: 2px;
+  }
+  .can-timeline-like {
+    font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .can-timeline-like.love { background: #FFEBEE; color: #E91E63; }
+  .can-timeline-like.normal { background: #FFF3E0; color: var(--calico-brown); }
+  .can-timeline-like.dislike { background: #ECEFF1; color: #607D8B; }
+  .can-timeline-photos {
+    display: flex; gap: 8px; padding: 0 14px 10px;
+  }
+  .can-timeline-photo-wrap {
+    flex: 1; position: relative;
+  }
+  .can-timeline-photo-label {
+    position: absolute; top: 6px; left: 6px;
+    background: rgba(0,0,0,0.5); color: white; font-size: 10px;
+    padding: 2px 6px; border-radius: 6px; z-index: 1;
+  }
+  .can-timeline-photo {
+    width: 100%; aspect-ratio: 1/1; object-fit: cover;
+    border-radius: 8px; background: var(--cream-dark);
+  }
+  .can-timeline-note {
+    padding: 0 14px 12px; font-size: 13px; color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .can-timeline-note strong { color: var(--calico-orange); }
+  .can-timeline-actions {
+    padding: 0 14px 12px; display: flex; gap: 8px;
+  }
+
+  /* ===== 体重时间轴 ===== */
+  .wt-timeline { position: relative; padding-left: 28px; }
+  .wt-timeline::before {
+    content: ''; position: absolute; left: 9px; top: 12px; bottom: 12px;
+    width: 2px; background: var(--cream-dark); border-radius: 1px;
+  }
+  .wt-item {
+    position: relative; margin-bottom: 14px; padding: 14px;
+    background: var(--cream-light); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-soft); overflow: hidden;
+  }
+  .wt-dot {
+    position: absolute; left: -19px; top: 18px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--calico-orange); border: 2px solid var(--cream); z-index: 1;
+  }
+  .wt-row { display: flex; justify-content: space-between; align-items: center; }
+  .wt-date { font-size: 12px; color: var(--text-muted); }
+  .wt-value { font-size: 22px; font-weight: 800; color: var(--calico-orange); margin-top: 2px; }
+  .wt-value-unit { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+  .wt-change {
+    font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 12px; flex-shrink: 0;
+  }
+  .wt-change.up { background: #E8F5E9; color: #2E7D32; }
+  .wt-change.down { background: #FFEBEE; color: #C62828; }
+  .wt-change.same { background: var(--cream-dark); color: var(--text-muted); }
+  .wt-photo { margin-top: 10px; border-radius: 8px; max-height: 200px; width: 100%; object-fit: cover; cursor: pointer; }
+  .wt-note { margin-top: 8px; font-size: 13px; color: var(--text-secondary); }
+  .wt-note strong { color: var(--calico-orange); }
+  .wt-actions { margin-top: 10px; display: flex; gap: 8px; }
+
+  /* ===== 相册网格 ===== */
+  .photo-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    padding-bottom: 20px;
+  }
+  .photo-grid-item {
+    aspect-ratio: 1/1; border-radius: 8px; overflow: hidden;
+    background: var(--cream-dark); cursor: pointer; position: relative;
+  }
+  .photo-grid-item img {
+    width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;
+  }
+  .photo-grid-item:active img { transform: scale(0.95); }
+</style>
+</head>
+<body>
+
+<!-- ==================== 首页 ==================== -->
+<div class="page active" id="page-home">
+  <div class="home-header">
+    <div class="home-header-top">
+      <span class="home-greeting">🐾 猫咪日记</span>
+      <span class="home-date" id="homeDate"></span>
+    </div>
+    <div class="home-profile">
+      <div class="home-avatar">🐱</div>
+      <div>
+        <div class="home-cat-name" id="homeCatName">小奶油</div>
+        <div class="home-cat-desc">淡奶油三花 · 记录每一天</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 16px;">
+    <div style="background: var(--white); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-soft); border-left: 4px solid var(--calico-orange);">
+      <span style="font-size: 22px;">🔔</span>
+      <div style="flex: 1;">
+        <div style="font-size: 13px; font-weight: 600;" id="homeReminderTitle">暂无提醒</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" id="homeReminderDesc">所有事项都完成啦</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-grid">
+    <div class="menu-card" onclick="navigateTo('sand')">
+      <span class="menu-card-icon">🧹</span>
+      <span class="menu-card-label">换猫砂</span>
+      <span class="menu-card-hint" id="sandHint">记录与提醒</span>
+      <span class="menu-card-badge" id="sandBadge" style="display:none">!</span>
+    </div>
+    <div class="menu-card" onclick="navigateTo('deworm')">
+      <span class="menu-card-icon">💊</span>
+      <span class="menu-card-label">驱虫</span>
+      <span class="menu-card-hint" id="dewormHint">内驱/外驱</span>
+      <span class="menu-card-badge" id="dewormBadge" style="display:none">!</span>
+    </div>
+    <div class="menu-card" onclick="navigateTo('hairball')">
+      <span class="menu-card-icon">🩷</span>
+      <span class="menu-card-label">化毛膏</span>
+      <span class="menu-card-hint" id="hairballHint">喂食记录</span>
+    </div>
+    <div class="menu-card" onclick="navigateTo('can')">
+      <span class="menu-card-icon">🥫</span>
+      <span class="menu-card-label">罐头</span>
+      <span class="menu-card-hint" id="canHint">喂食时间轴</span>
+    </div>
+    <div class="menu-card" onclick="navigateTo('weight')">
+      <span class="menu-card-icon">⚖️</span>
+      <span class="menu-card-label">体重</span>
+      <span class="menu-card-hint" id="weightHint">成长曲线</span>
+    </div>
+    <div class="menu-card" onclick="navigateTo('photos')">
+      <span class="menu-card-icon">📷</span>
+      <span class="menu-card-label">相册</span>
+      <span class="menu-card-hint" id="photosHint">可爱瞬间</span>
+    </div>
+  </div>
+
+  <div style="padding: 0 16px;">
+    <div style="background: linear-gradient(135deg, var(--cream), var(--cream-dark)); border-radius: var(--radius); padding: 18px; display: flex; align-items: center; gap: 14px; cursor: pointer;" onclick="navigateTo('photos')">
+      <div style="width: 56px; height: 56px; border-radius: 12px; background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: var(--shadow-soft);">🐾</div>
+      <div>
+        <div style="font-size: 15px; font-weight: 700;">猫咪相册</div>
+        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="photosCount">记录小奶油的可爱瞬间</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 换猫砂页面 ==================== -->
+<div class="page" id="page-sand">
+  <div class="nav-header">
+    <button class="nav-back" onclick="goHome()">‹</button>
+    <span class="nav-title">换猫砂记录</span>
+    <button class="nav-action" onclick="openSandForm()">+ 记录</button>
+  </div>
+
+  <!-- 上次/下次信息卡 -->
+  <div class="info-card">
+    <div class="info-card-title">📊 更换概览</div>
+    <div class="info-row">
+      <div class="info-item">
+        <div class="info-item-label">上次更换</div>
+        <div class="info-item-value" id="sandLastDate">--</div>
+        <div class="info-item-sub" id="sandLastBags">--</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">下次提醒</div>
+        <div class="info-item-value" id="sandNextDate">--</div>
+        <div class="info-item-sub" id="sandNextDays">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提醒横幅 -->
+  <div class="reminder-bar" id="sandReminderBar">
+    <span class="reminder-bar-icon">🔔</span>
+    <div class="reminder-bar-text">
+      <div class="reminder-bar-title" id="sandReminderTitle">该换猫砂啦！</div>
+      <div class="reminder-bar-desc" id="sandReminderDesc">已过预计更换日期</div>
+    </div>
+  </div>
+
+  <!-- 历史记录表格 -->
+  <div class="table-section">
+    <div class="table-header">
+      <span class="table-title">历史记录</span>
+      <span class="table-count" id="sandCount">共 0 条</span>
+    </div>
+    <div id="sandTable"></div>
+  </div>
+</div>
+
+<!-- ==================== 添加换猫砂记录模态框 ==================== -->
+<div class="modal-overlay" id="sandModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">记录换猫砂</span>
+      <button class="modal-close" onclick="closeSandForm()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">更换日期</label>
+      <input type="date" class="form-input" id="sandFormDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">更换了几包</label>
+      <input type="number" class="form-input" id="sandFormBags" placeholder="请输入包数，如 2" min="0.5" step="0.5">
+    </div>
+    <div class="form-group">
+      <label class="form-label">提醒周期</label>
+      <select class="form-select" id="sandFormReminder">
+        <option value="3">每 3 天</option>
+        <option value="5">每 5 天</option>
+        <option value="7" selected>每 7 天</option>
+        <option value="10">每 10 天</option>
+        <option value="14">每 14 天</option>
+        <option value="30">每 30 天</option>
+      </select>
+      <div class="form-hint">到时间后会自动提醒你</div>
+    </div>
+    <button class="btn-primary" onclick="saveSandRecord()">保存记录</button>
+  </div>
+</div>
+
+<!-- ==================== 其他页面占位 ==================== -->
+<div class="page" id="page-deworm">
+  <div class="nav-header">
+    <button class="nav-back" onclick="goHome()">‹</button>
+    <span class="nav-title">驱虫记录</span>
+    <button class="nav-action" onclick="openDewormForm()">+ 记录</button>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-title">💊 驱虫概览</div>
+    <div class="info-row">
+      <div class="info-item">
+        <div class="info-item-label">上次驱虫</div>
+        <div class="info-item-value" id="dewormLastDate">--</div>
+        <div class="info-item-sub" id="dewormLastInfo">--</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">下次提醒</div>
+        <div class="info-item-value" id="dewormNextDate">--</div>
+        <div class="info-item-sub" id="dewormNextDays">--</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reminder-bar" id="dewormReminderBar">
+    <span class="reminder-bar-icon">🔔</span>
+    <div class="reminder-bar-text">
+      <div class="reminder-bar-title" id="dewormReminderTitle">该驱虫啦！</div>
+      <div class="reminder-bar-desc" id="dewormReminderDesc">已过预计驱虫日期</div>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="table-header">
+      <span class="table-title">历史记录</span>
+      <span class="table-count" id="dewormCount">共 0 条</span>
+    </div>
+    <div id="dewormTable"></div>
+  </div>
+</div>
+
+<!-- 驱虫记录模态框 -->
+<div class="modal-overlay" id="dewormModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">记录驱虫</span>
+      <button class="modal-close" onclick="closeDewormForm()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">驱虫日期</label>
+      <input type="date" class="form-input" id="dewormFormDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">驱虫类型</label>
+      <select class="form-select" id="dewormFormType">
+        <option value="内驱">内驱</option>
+        <option value="外驱">外驱</option>
+        <option value="内外同驱">内外同驱</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">剂量</label>
+      <input type="text" class="form-input" id="dewormFormDose" placeholder="如 1片 / 0.5ml / 半粒">
+      <div class="form-hint">直接输入数字和单位，无需选填</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">提醒周期</label>
+      <select class="form-select" id="dewormFormReminder">
+        <option value="7">每 7 天</option>
+        <option value="14">每 14 天</option>
+        <option value="30" selected>每 30 天</option>
+        <option value="60">每 60 天</option>
+        <option value="90">每 90 天（3个月）</option>
+        <option value="180">每 180 天（半年）</option>
+      </select>
+      <div class="form-hint">内驱一般每 3 个月，外驱一般每月一次</div>
+    </div>
+    <button class="btn-primary" onclick="saveDewormRecord()">保存记录</button>
+  </div>
+</div>
+<div class="page" id="page-hairball">
+  <div class="nav-header">
+    <button class="nav-back" onclick="goHome()">‹</button>
+    <span class="nav-title">化毛膏记录</span>
+    <button class="nav-action" onclick="openHairballForm()">+ 记录</button>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-title">🩷 喂食概览</div>
+    <div class="info-row">
+      <div class="info-item">
+        <div class="info-item-label">上次喂食</div>
+        <div class="info-item-value" id="hairballLastDate">--</div>
+        <div class="info-item-sub" id="hairballLastDose">--</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">下次提醒</div>
+        <div class="info-item-value" id="hairballNextDate">--</div>
+        <div class="info-item-sub" id="hairballNextDays">--</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reminder-bar" id="hairballReminderBar">
+    <span class="reminder-bar-icon">🔔</span>
+    <div class="reminder-bar-text">
+      <div class="reminder-bar-title" id="hairballReminderTitle">该喂化毛膏啦！</div>
+      <div class="reminder-bar-desc" id="hairballReminderDesc">已过预计喂食日期</div>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="table-header">
+      <span class="table-title">历史记录</span>
+      <span class="table-count" id="hairballCount">共 0 条</span>
+    </div>
+    <div id="hairballTable"></div>
+  </div>
+</div>
+
+<!-- 化毛膏记录模态框 -->
+<div class="modal-overlay" id="hairballModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">记录化毛膏</span>
+      <button class="modal-close" onclick="closeHairballForm()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">喂食日期</label>
+      <input type="date" class="form-input" id="hairballFormDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">剂量</label>
+      <input type="text" class="form-input" id="hairballFormDose" placeholder="如 3cm / 一管 / 半条">
+      <div class="form-hint">直接输入数字和单位，无需选填</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">提醒周期</label>
+      <select class="form-select" id="hairballFormReminder">
+        <option value="1" selected>每 1 天</option>
+        <option value="2">每 2 天</option>
+        <option value="3">每 3 天</option>
+        <option value="5">每 5 天</option>
+        <option value="7">每 7 天</option>
+      </select>
+      <div class="form-hint">建议根据猫咪换毛情况调整频率</div>
+    </div>
+    <button class="btn-primary" onclick="saveHairballRecord()">保存记录</button>
+  </div>
+</div>
+<div class="page" id="page-can">
+  <div class="nav-header">
+    <button class="nav-back" onclick="goHome()">‹</button>
+    <span class="nav-title">罐头记录</span>
+    <button class="nav-action" onclick="openCanForm()">+ 记录</button>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-title">🥫 罐头概览</div>
+    <div class="info-row">
+      <div class="info-item">
+        <div class="info-item-label">累计罐头</div>
+        <div class="info-item-value" id="canTotalCount">0</div>
+        <div class="info-item-sub">个</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">最近一次</div>
+        <div class="info-item-value" id="canLastDate">--</div>
+        <div class="info-item-sub" id="canLastName">--</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="table-header">
+      <span class="table-title">喂食时间轴</span>
+      <span class="table-count" id="canCount">共 0 条</span>
+    </div>
+    <div id="canTimeline"></div>
+  </div>
+</div>
+
+<!-- 罐头记录模态框 -->
+<div class="modal-overlay" id="canModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">记录罐头</span>
+      <button class="modal-close" onclick="closeCanForm()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">喂食日期</label>
+      <input type="date" class="form-input" id="canFormDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">罐头名字</label>
+      <input type="text" class="form-input" id="canFormName" placeholder="如 皇家鸡肉味、巅峰牛肉">
+    </div>
+    <div class="form-group">
+      <label class="form-label">克数</label>
+      <input type="number" class="form-input" id="canFormGrams" placeholder="如 85" min="0" step="1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">罐头照片</label>
+      <div class="photo-upload-area" onclick="document.getElementById('canFormPhoto').click()">
+        <input type="file" id="canFormPhoto" accept="image/*" style="display:none" onchange="previewCanPhoto(this,'canPhotoPreview')">
+        <div id="canPhotoPreview" class="photo-preview-placeholder">
+          <span style="font-size:28px;">📷</span>
+          <span style="font-size:12px;color:var(--text-muted);margin-top:6px;">点击上传罐头照片</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">吃完后碗里剩余照片</label>
+      <div class="photo-upload-area" onclick="document.getElementById('canFormLeftoverPhoto').click()">
+        <input type="file" id="canFormLeftoverPhoto" accept="image/*" style="display:none" onchange="previewCanPhoto(this,'canLeftoverPreview')">
+        <div id="canLeftoverPreview" class="photo-preview-placeholder">
+          <span style="font-size:28px;">🥣</span>
+          <span style="font-size:12px;color:var(--text-muted);margin-top:6px;">点击上传剩余照片（可选）</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">是否爱吃</label>
+      <select class="form-select" id="canFormLike">
+        <option value="">不填</option>
+        <option value="很爱吃">很爱吃 😍</option>
+        <option value="一般">一般 😐</option>
+        <option value="不太爱吃">不太爱吃 😿</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input type="text" class="form-input" id="canFormNote" placeholder="其他备注，如吃的很快">
+    </div>
+    <button class="btn-primary" onclick="saveCanRecord()">保存记录</button>
+  </div>
+</div>
+<div class="page" id="page-weight">
+  <div class="nav-header">
+    <button class="nav-back" onclick="goHome()">‹</button>
+    <span class="nav-title">体重记录</span>
+    <button class="nav-action" onclick="openWeightForm()">+ 记录</button>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-title">⚖️ 体重概览</div>
+    <div class="info-row">
+      <div class="info-item">
+        <div class="info-item-label">当前体重</div>
+        <div class="info-item-value" id="weightCurrent">--</div>
+        <div class="info-item-sub" id="weightChange">--</div>
+      </div>
+      <div class="info-item">
+        <div class="info-item-label">最近称重</div>
+        <div class="info-item-value" id="weightLastDate">--</div>
+        <div class="info-item-sub" id="weightTotalRecords">共 0 条</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 体重趋势迷你图 -->
+  <div class="table-section" id="weightChartCard" style="display:none;">
+    <div class="table-header">
+      <span class="table-title">体重趋势</span>
+    </div>
+    <canvas id="weightChart" style="width:100%;height:140px;"></canvas>
+  </div>
+
+  <div class="table-section">
+    <div class="table-header">
+      <span class="table-title">称重时间轴</span>
+      <span class="table-count" id="weightCount">共 0 条</span>
+    </div>
+    <div id="weightTimeline"></div>
+  </div>
+</div>
+
+<!-- 体重记录模态框 -->
+<div class="modal-overlay" id="weightModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">记录体重</span>
+      <button class="modal-close" onclick="closeWeightForm()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">称重日期</label>
+      <input type="date" class="form-input" id="weightFormDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">体重 (kg)</label>
+      <input type="number" class="form-input" id="weightFormValue" placeholder="如 4.2" min="0" step="0.1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">照片</label>
+      <div class="photo-upload-area" onclick="document.getElementById('weightFormPhoto').click()">
+        <input type="file" id="weightFormPhoto" accept="image/*" style="display:none" onchange="previewWeightPhoto(this,'weightPhotoPreview')">
+        <div id="weightPhotoPreview" class="photo-preview-placeholder">
+          <span style="font-size:28px;">📷</span>
+          <span style="font-size:12px;color:var(--text-muted);margin-top:6px;">点击上传照片（可选）</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input type="text" class="form-input" id="weightFormNote" placeholder="如 换毛期、刚绝育等">
+    </div>
+    <button class="btn-primary" onclick="saveWeightRecord()">保存记录</button>
+  </div>
+</div>
+<div class="page" id="page-photos">
+  <div class="nav-header">
+    <button class="nav-back" onclick="goHome()">‹</button>
+    <span class="nav-title">猫咪相册</span>
+    <button class="nav-action" onclick="document.getElementById('photoFileInput').click()">+ 上传</button>
+    <input type="file" id="photoFileInput" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(this)">
+  </div>
+
+  <div class="info-card" style="padding:14px 18px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;color:var(--text-secondary);">🐾 小奶油的可爱瞬间</span>
+      <span style="font-size:13px;color:var(--text-muted);" id="photosTotal">共 0 张</span>
+    </div>
+  </div>
+
+  <div id="photosGrid" style="padding:0 16px;"></div>
+
+  <!-- 大图查看 -->
+  <div id="photoViewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;" onclick="closePhotoViewer()">
+    <img id="photoViewerImg" style="max-width:100%;max-height:85vh;object-fit:contain;">
+    <div id="photoViewerDate" style="color:rgba(255,255,255,0.7);font-size:13px;margin-top:12px;"></div>
+    <button onclick="event.stopPropagation();deletePhotoViewerPhoto()" style="position:absolute;bottom:calc(40px + var(--safe-bottom));right:20px;background:rgba(255,255,255,0.2);border:none;color:white;padding:10px 20px;border-radius:20px;font-size:14px;cursor:pointer;backdrop-filter:blur(4px);">删除</button>
+    <button onclick="closePhotoViewer()" style="position:absolute;top:calc(20px + var(--safe-top));right:16px;background:rgba(255,255,255,0.2);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">×</button>
+  </div>
+</div>
+
+<!-- ==================== 安装提示 ==================== -->
+<div class="install-tip" id="installTip">
+  <button class="install-tip-close" onclick="dismissInstallTip()">×</button>
+  <div class="install-tip-title">📱 添加到主屏幕</div>
+  <div class="install-tip-text">
+    点击 Safari 底部「分享」按钮，然后选择「添加到主屏幕」，即可像 App 一样离线使用，数据永久保存在手机本地。
+  </div>
+</div>
+
+<!-- ==================== Toast ==================== -->
+<div id="toast"></div>
+
+<script>
+// ==================== 数据存储 ====================
+const STORAGE_KEY = 'catDiaryData';
+
+function getData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return {
+    catName: '小奶油',
+    sandRecords: [],
+    dewormRecords: [],
+    hairballRecords: [],
+    canRecords: [],
+    weightRecords: [],
+    photos: []
+  };
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ==================== 路由 ====================
+function navigateTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  window.scrollTo(0, 0);
+  if (page === 'sand') renderSandPage();
+  if (page === 'deworm') renderDewormPage();
+  if (page === 'hairball') renderHairballPage();
+  if (page === 'can') renderCanPage();
+  if (page === 'weight') renderWeightPage();
+  if (page === 'photos') renderPhotosPage();
+}
+
+function goHome() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-home').classList.add('active');
+  window.scrollTo(0, 0);
+  renderHome();
+}
+
+// ==================== 工具函数 ====================
+function formatDate(dateStr) {
+  if (!dateStr) return '--';
+  const d = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return '今天';
+  if (diff === 1) return '昨天';
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+function formatDateFull(dateStr) {
+  if (!dateStr) return '--';
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + parseInt(days));
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const target = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translate(-50%, -50%) scale(1)';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translate(-50%, -50%) scale(0.9)';
+  }, 1800);
+}
+
+// ==================== 首页 ====================
+function renderHome() {
+  const now = new Date();
+  const weekDays = ['日','一','二','三','四','五','六'];
+  document.getElementById('homeDate').textContent =
+    `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 周${weekDays[now.getDay()]}`;
+
+  const data = getData();
+  document.getElementById('homeCatName').textContent = data.catName || '小奶油';
+
+  // 检查提醒
+  let reminders = [];
+
+  // 换猫砂提醒
+  if (data.sandRecords && data.sandRecords.length > 0) {
+    const last = data.sandRecords[0];
+    const nextDate = addDays(last.date, last.reminderDays || 7);
+    const days = daysUntil(nextDate);
+    if (days !== null && days <= 0) {
+      reminders.push('换猫砂');
+      document.getElementById('sandBadge').style.display = 'flex';
+    } else {
+      document.getElementById('sandBadge').style.display = 'none';
+    }
+    document.getElementById('sandHint').textContent = days !== null && days <= 0 ? '已到期' : `${days > 0 ? days + '天后' : '今天'}提醒`;
+  }
+
+  // 驱虫提醒
+  if (data.dewormRecords && data.dewormRecords.length > 0) {
+    const last = data.dewormRecords[0];
+    const nextDate = addDays(last.date, last.reminderDays || 30);
+    const days = daysUntil(nextDate);
+    if (days !== null && days <= 0) {
+      reminders.push('驱虫');
+      document.getElementById('dewormBadge').style.display = 'flex';
+    } else {
+      document.getElementById('dewormBadge').style.display = 'none';
+    }
+    document.getElementById('dewormHint').textContent = days !== null && days <= 0 ? '已到期' : `${days > 0 ? days + '天后' : '今天'}提醒`;
+  }
+
+  const title = document.getElementById('homeReminderTitle');
+  const desc = document.getElementById('homeReminderDesc');
+  if (reminders.length > 0) {
+    title.textContent = `该${reminders.join('、')}啦！`;
+    desc.textContent = `有 ${reminders.length} 项事项需要处理`;
+    title.style.color = 'var(--danger)';
+  } else {
+    title.textContent = '暂无提醒';
+    desc.textContent = '所有事项都完成啦';
+    title.style.color = '';
+  }
+
+  document.getElementById('photosCount').textContent =
+    data.photos && data.photos.length > 0 ? `已保存 ${data.photos.length} 张照片` : '记录小奶油的可爱瞬间';
+}
+
+// ==================== 换猫砂页面 ====================
+function renderSandPage() {
+  const data = getData();
+  const records = data.sandRecords || [];
+
+  // 上次/下次信息
+  if (records.length > 0) {
+    const last = records[0];
+    document.getElementById('sandLastDate').textContent = formatDate(last.date);
+    document.getElementById('sandLastBags').textContent = `${last.bags || 1} 包`;
+
+    const nextDate = addDays(last.date, last.reminderDays || 7);
+    const days = daysUntil(nextDate);
+    document.getElementById('sandNextDate').textContent = formatDate(nextDate);
+
+    const nextEl = document.getElementById('sandNextDate');
+    const daysEl = document.getElementById('sandNextDays');
+
+    if (days !== null) {
+      if (days < 0) {
+        nextEl.classList.add('overdue');
+        nextEl.classList.remove('upcoming');
+        daysEl.textContent = `已过期 ${Math.abs(days)} 天`;
+        daysEl.style.color = 'var(--danger)';
+      } else if (days === 0) {
+        nextEl.classList.add('upcoming');
+        nextEl.classList.remove('overdue');
+        daysEl.textContent = '今天到期';
+        daysEl.style.color = 'var(--calico-orange)';
+      } else {
+        nextEl.classList.remove('overdue', 'upcoming');
+        daysEl.textContent = `还有 ${days} 天`;
+        daysEl.style.color = 'var(--text-secondary)';
+      }
+    }
+
+    // 提醒横幅
+    const bar = document.getElementById('sandReminderBar');
+    if (days !== null && days <= 0) {
+      bar.classList.remove('hidden');
+      document.getElementById('sandReminderTitle').textContent = '该换猫砂啦！';
+      document.getElementById('sandReminderDesc').textContent = days < 0
+        ? `已过预计更换日期 ${Math.abs(days)} 天`
+        : '今天就是更换日期';
+    } else {
+      bar.classList.add('hidden');
+    }
+  } else {
+    document.getElementById('sandLastDate').textContent = '--';
+    document.getElementById('sandLastBags').textContent = '--';
+    document.getElementById('sandNextDate').textContent = '--';
+    document.getElementById('sandNextDays').textContent = '--';
+    document.getElementById('sandReminderBar').classList.add('hidden');
+  }
+
+  // 表格
+  document.getElementById('sandCount').textContent = `共 ${records.length} 条`;
+  const tableEl = document.getElementById('sandTable');
+
+  if (records.length === 0) {
+    tableEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🧹</div>
+        <div class="empty-state-text">还没有换猫砂记录<br>点击右上角 + 添加第一条记录</div>
+      </div>`;
+    return;
+  }
+
+  tableEl.innerHTML = records.map((r, i) => {
+    const nextDate = addDays(r.date, r.reminderDays || 7);
+    const days = daysUntil(nextDate);
+    let status = '';
+    if (days !== null && days <= 0) status = '<span style="color:var(--danger);font-size:11px;margin-left:6px;">已到期</span>';
+    else if (days !== null && days <= 2) status = '<span style="color:var(--calico-orange);font-size:11px;margin-left:6px;">即将到期</span>';
+
+    return `
+      <div class="table-row">
+        <div class="table-cell-date">${formatDateFull(r.date)}</div>
+        <div class="table-cell-content">
+          <strong>${r.bags || 1}</strong> 包猫砂${status}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            提醒周期：每 ${r.reminderDays || 7} 天 · 下次：${formatDateFull(nextDate)}
+          </div>
+        </div>
+        <div class="table-cell-action">
+          <button class="btn-danger" onclick="deleteSandRecord(${r.id})">删除</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openSandForm() {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('sandFormDate').value = dateStr;
+  document.getElementById('sandFormBags').value = '';
+  document.getElementById('sandFormReminder').value = '7';
+  document.getElementById('sandModal').classList.add('active');
+}
+
+function closeSandForm() {
+  document.getElementById('sandModal').classList.remove('active');
+}
+
+function saveSandRecord() {
+  const date = document.getElementById('sandFormDate').value;
+  const bags = parseFloat(document.getElementById('sandFormBags').value) || 1;
+  const reminderDays = parseInt(document.getElementById('sandFormReminder').value) || 7;
+
+  if (!date) {
+    showToast('请选择更换日期');
+    return;
+  }
+
+  const data = getData();
+  if (!data.sandRecords) data.sandRecords = [];
+
+  data.sandRecords.unshift({
+    id: Date.now(),
+    date: date,
+    bags: bags,
+    reminderDays: reminderDays,
+    createdAt: Date.now()
+  });
+
+  // 按日期降序排序
+  data.sandRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  saveData(data);
+  closeSandForm();
+  renderSandPage();
+  showToast('记录已保存');
+}
+
+function deleteSandRecord(id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  const data = getData();
+  data.sandRecords = (data.sandRecords || []).filter(r => r.id !== id);
+  saveData(data);
+  renderSandPage();
+  showToast('已删除');
+}
+
+// ==================== 驱虫页面 ====================
+const dewormTypeColors = {
+  '内驱': { bg: '#E8F5E9', text: '#2E7D32' },
+  '外驱': { bg: '#E3F2FD', text: '#1565C0' },
+  '内外同驱': { bg: '#F3E5F5', text: '#7B1FA2' }
+};
+
+function renderDewormPage() {
+  const data = getData();
+  const records = data.dewormRecords || [];
+
+  if (records.length > 0) {
+    const last = records[0];
+    document.getElementById('dewormLastDate').textContent = formatDate(last.date);
+    document.getElementById('dewormLastInfo').textContent = `${last.type} · ${last.dose || '未填'}`;
+
+    const nextDate = addDays(last.date, last.reminderDays || 30);
+    const days = daysUntil(nextDate);
+    document.getElementById('dewormNextDate').textContent = formatDate(nextDate);
+
+    const nextEl = document.getElementById('dewormNextDate');
+    const daysEl = document.getElementById('dewormNextDays');
+
+    if (days !== null) {
+      if (days < 0) {
+        nextEl.classList.add('overdue');
+        nextEl.classList.remove('upcoming');
+        daysEl.textContent = `已过期 ${Math.abs(days)} 天`;
+        daysEl.style.color = 'var(--danger)';
+      } else if (days === 0) {
+        nextEl.classList.add('upcoming');
+        nextEl.classList.remove('overdue');
+        daysEl.textContent = '今天到期';
+        daysEl.style.color = 'var(--calico-orange)';
+      } else {
+        nextEl.classList.remove('overdue', 'upcoming');
+        daysEl.textContent = `还有 ${days} 天`;
+        daysEl.style.color = 'var(--text-secondary)';
+      }
+    }
+
+    const bar = document.getElementById('dewormReminderBar');
+    if (days !== null && days <= 0) {
+      bar.classList.remove('hidden');
+      document.getElementById('dewormReminderTitle').textContent = '该驱虫啦！';
+      document.getElementById('dewormReminderDesc').textContent = days < 0
+        ? `已过预计驱虫日期 ${Math.abs(days)} 天`
+        : '今天就是驱虫日期';
+    } else {
+      bar.classList.add('hidden');
+    }
+  } else {
+    document.getElementById('dewormLastDate').textContent = '--';
+    document.getElementById('dewormLastInfo').textContent = '--';
+    document.getElementById('dewormNextDate').textContent = '--';
+    document.getElementById('dewormNextDays').textContent = '--';
+    document.getElementById('dewormReminderBar').classList.add('hidden');
+  }
+
+  document.getElementById('dewormCount').textContent = `共 ${records.length} 条`;
+  const tableEl = document.getElementById('dewormTable');
+
+  if (records.length === 0) {
+    tableEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">💊</div>
+        <div class="empty-state-text">还没有驱虫记录<br>点击右上角 + 添加第一条记录</div>
+      </div>`;
+    return;
+  }
+
+  tableEl.innerHTML = records.map((r) => {
+    const nextDate = addDays(r.date, r.reminderDays || 30);
+    const days = daysUntil(nextDate);
+    let status = '';
+    if (days !== null && days <= 0) status = '<span style="color:var(--danger);font-size:11px;margin-left:6px;">已到期</span>';
+    else if (days !== null && days <= 7) status = '<span style="color:var(--calico-orange);font-size:11px;margin-left:6px;">即将到期</span>';
+
+    const color = dewormTypeColors[r.type] || dewormTypeColors['内驱'];
+
+    return `
+      <div class="table-row">
+        <div class="table-cell-date">${formatDateFull(r.date)}</div>
+        <div class="table-cell-content">
+          <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:${color.bg};color:${color.text};">${r.type}</span>
+          <span style="margin-left:6px;font-size:13px;">剂量 <strong style="color:var(--calico-orange);">${r.dose || '未填'}</strong></span>${status}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            提醒周期：每 ${r.reminderDays || 30} 天 · 下次：${formatDateFull(nextDate)}
+          </div>
+        </div>
+        <div class="table-cell-action">
+          <button class="btn-danger" onclick="deleteDewormRecord(${r.id})">删除</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openDewormForm() {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('dewormFormDate').value = dateStr;
+  document.getElementById('dewormFormType').value = '内驱';
+  document.getElementById('dewormFormDose').value = '';
+  document.getElementById('dewormFormReminder').value = '30';
+  document.getElementById('dewormModal').classList.add('active');
+}
+
+function closeDewormForm() {
+  document.getElementById('dewormModal').classList.remove('active');
+}
+
+function saveDewormRecord() {
+  const date = document.getElementById('dewormFormDate').value;
+  const type = document.getElementById('dewormFormType').value;
+  const dose = document.getElementById('dewormFormDose').value.trim();
+  const reminderDays = parseInt(document.getElementById('dewormFormReminder').value) || 30;
+
+  if (!date) {
+    showToast('请选择驱虫日期');
+    return;
+  }
+
+  const data = getData();
+  if (!data.dewormRecords) data.dewormRecords = [];
+
+  data.dewormRecords.unshift({
+    id: Date.now(),
+    date: date,
+    type: type,
+    dose: dose,
+    reminderDays: reminderDays,
+    createdAt: Date.now()
+  });
+
+  data.dewormRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  saveData(data);
+  closeDewormForm();
+  renderDewormPage();
+  showToast('记录已保存');
+}
+
+function deleteDewormRecord(id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  const data = getData();
+  data.dewormRecords = (data.dewormRecords || []).filter(r => r.id !== id);
+  saveData(data);
+  renderDewormPage();
+  showToast('已删除');
+}
+
+// ==================== 化毛膏页面 ====================
+function renderHairballPage() {
+  const data = getData();
+  const records = data.hairballRecords || [];
+
+  if (records.length > 0) {
+    const last = records[0];
+    document.getElementById('hairballLastDate').textContent = formatDate(last.date);
+    document.getElementById('hairballLastDose').textContent = last.dose || '未填';
+
+    const nextDate = addDays(last.date, last.reminderDays || 3);
+    const days = daysUntil(nextDate);
+    document.getElementById('hairballNextDate').textContent = formatDate(nextDate);
+
+    const nextEl = document.getElementById('hairballNextDate');
+    const daysEl = document.getElementById('hairballNextDays');
+
+    if (days !== null) {
+      if (days < 0) {
+        nextEl.classList.add('overdue');
+        nextEl.classList.remove('upcoming');
+        daysEl.textContent = `已过期 ${Math.abs(days)} 天`;
+        daysEl.style.color = 'var(--danger)';
+      } else if (days === 0) {
+        nextEl.classList.add('upcoming');
+        nextEl.classList.remove('overdue');
+        daysEl.textContent = '今天到期';
+        daysEl.style.color = 'var(--calico-orange)';
+      } else {
+        nextEl.classList.remove('overdue', 'upcoming');
+        daysEl.textContent = `还有 ${days} 天`;
+        daysEl.style.color = 'var(--text-secondary)';
+      }
+    }
+
+    const bar = document.getElementById('hairballReminderBar');
+    if (days !== null && days <= 0) {
+      bar.classList.remove('hidden');
+      document.getElementById('hairballReminderTitle').textContent = '该喂化毛膏啦！';
+      document.getElementById('hairballReminderDesc').textContent = days < 0
+        ? `已过预计喂食日期 ${Math.abs(days)} 天`
+        : '今天就是喂食日期';
+    } else {
+      bar.classList.add('hidden');
+    }
+  } else {
+    document.getElementById('hairballLastDate').textContent = '--';
+    document.getElementById('hairballLastDose').textContent = '--';
+    document.getElementById('hairballNextDate').textContent = '--';
+    document.getElementById('hairballNextDays').textContent = '--';
+    document.getElementById('hairballReminderBar').classList.add('hidden');
+  }
+
+  document.getElementById('hairballCount').textContent = `共 ${records.length} 条`;
+  const tableEl = document.getElementById('hairballTable');
+
+  if (records.length === 0) {
+    tableEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🩷</div>
+        <div class="empty-state-text">还没有化毛膏记录<br>点击右上角 + 添加第一条记录</div>
+      </div>`;
+    return;
+  }
+
+  tableEl.innerHTML = records.map((r) => {
+    const nextDate = addDays(r.date, r.reminderDays || 3);
+    const days = daysUntil(nextDate);
+    let status = '';
+    if (days !== null && days <= 0) status = '<span style="color:var(--danger);font-size:11px;margin-left:6px;">已到期</span>';
+    else if (days !== null && days <= 1) status = '<span style="color:var(--calico-orange);font-size:11px;margin-left:6px;">即将到期</span>';
+
+    return `
+      <div class="table-row">
+        <div class="table-cell-date">${formatDateFull(r.date)}</div>
+        <div class="table-cell-content">
+          <strong style="color:var(--calico-orange);font-size:15px;">${r.dose || '未填'}</strong>${status}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+            提醒周期：每 ${r.reminderDays || 3} 天 · 下次：${formatDateFull(nextDate)}
+          </div>
+        </div>
+        <div class="table-cell-action">
+          <button class="btn-danger" onclick="deleteHairballRecord(${r.id})">删除</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openHairballForm() {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('hairballFormDate').value = dateStr;
+  document.getElementById('hairballFormDose').value = '';
+  document.getElementById('hairballFormReminder').value = '3';
+  document.getElementById('hairballModal').classList.add('active');
+}
+
+function closeHairballForm() {
+  document.getElementById('hairballModal').classList.remove('active');
+}
+
+function saveHairballRecord() {
+  const date = document.getElementById('hairballFormDate').value;
+  const dose = document.getElementById('hairballFormDose').value.trim();
+  const reminderDays = parseInt(document.getElementById('hairballFormReminder').value) || 3;
+
+  if (!date) {
+    showToast('请选择喂食日期');
+    return;
+  }
+
+  const data = getData();
+  if (!data.hairballRecords) data.hairballRecords = [];
+
+  data.hairballRecords.unshift({
+    id: Date.now(),
+    date: date,
+    dose: dose,
+    reminderDays: reminderDays,
+    createdAt: Date.now()
+  });
+
+  data.hairballRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  saveData(data);
+  closeHairballForm();
+  renderHairballPage();
+  showToast('记录已保存');
+}
+
+function deleteHairballRecord(id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  const data = getData();
+  data.hairballRecords = (data.hairballRecords || []).filter(r => r.id !== id);
+  saveData(data);
+  renderHairballPage();
+  showToast('已删除');
+}
+
+// ==================== 罐头页面 ====================
+let canPhotoData = { photo: '', leftover: '' };
+
+function renderCanPage() {
+  const data = getData();
+  const records = data.canRecords || [];
+
+  document.getElementById('canTotalCount').textContent = records.length;
+
+  if (records.length > 0) {
+    const last = records[0];
+    document.getElementById('canLastDate').textContent = formatDate(last.date);
+    document.getElementById('canLastName').textContent = last.name || '未填';
+  } else {
+    document.getElementById('canLastDate').textContent = '--';
+    document.getElementById('canLastName').textContent = '--';
+  }
+
+  document.getElementById('canCount').textContent = `共 ${records.length} 条`;
+  const timelineEl = document.getElementById('canTimeline');
+
+  if (records.length === 0) {
+    timelineEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🥫</div>
+        <div class="empty-state-text">还没有罐头记录<br>点击右上角 + 添加第一条记录</div>
+      </div>`;
+    return;
+  }
+
+  timelineEl.innerHTML = `<div class="can-timeline">` + records.map((r) => {
+    const likeClass = r.like === '很爱吃' ? 'love' : (r.like === '不太爱吃' ? 'dislike' : 'normal');
+    const likeText = r.like || '';
+
+    let photosHtml = '';
+    if (r.photo || r.leftoverPhoto) {
+      photosHtml = '<div class="can-timeline-photos">';
+      if (r.photo) {
+        photosHtml += `<div class="can-timeline-photo-wrap">
+          <span class="can-timeline-photo-label">罐头</span>
+          <img class="can-timeline-photo" src="${r.photo}" onclick="viewPhoto('${r.id}','photo')" style="cursor:pointer">
+        </div>`;
+      }
+      if (r.leftoverPhoto) {
+        photosHtml += `<div class="can-timeline-photo-wrap">
+          <span class="can-timeline-photo-label">剩余</span>
+          <img class="can-timeline-photo" src="${r.leftoverPhoto}" onclick="viewPhoto('${r.id}','leftover')" style="cursor:pointer">
+        </div>`;
+      }
+      photosHtml += '</div>';
+    }
+
+    let noteHtml = '';
+    if (r.note) {
+      noteHtml = `<div class="can-timeline-note">📝 ${r.note}</div>`;
+    }
+
+    return `
+      <div class="can-timeline-item">
+        <div class="can-timeline-dot"></div>
+        <div class="can-timeline-header">
+          <div>
+            <div class="can-timeline-date">${formatDateFull(r.date)}</div>
+            <div class="can-timeline-name">${r.name || '未填名字'}</div>
+            <div class="can-timeline-grams">${r.grams ? r.grams + 'g' : ''}</div>
+          </div>
+          ${likeText ? `<span class="can-timeline-like ${likeClass}">${likeText}</span>` : ''}
+        </div>
+        ${photosHtml}
+        ${noteHtml}
+        <div class="can-timeline-actions">
+          <button class="btn-danger" onclick="deleteCanRecord(${r.id})">删除</button>
+        </div>
+      </div>`;
+  }).join('') + `</div>`;
+}
+
+function openCanForm() {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('canFormDate').value = dateStr;
+  document.getElementById('canFormName').value = '';
+  document.getElementById('canFormGrams').value = '';
+  document.getElementById('canFormLike').value = '';
+  document.getElementById('canFormNote').value = '';
+  canPhotoData = { photo: '', leftover: '' };
+  resetPhotoPreview('canPhotoPreview', '📷', '点击上传罐头照片');
+  resetPhotoPreview('canLeftoverPreview', '🥣', '点击上传剩余照片（可选）');
+  document.getElementById('canModal').classList.add('active');
+}
+
+function closeCanForm() {
+  document.getElementById('canModal').classList.remove('active');
+}
+
+function resetPhotoPreview(id, icon, text) {
+  const el = document.getElementById(id);
+  el.classList.remove('has-image');
+  el.innerHTML = `<span style="font-size:28px;">${icon}</span><span style="font-size:12px;color:var(--text-muted);margin-top:6px;">${text}</span>`;
+}
+
+function previewCanPhoto(input, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const isLeftover = previewId === 'canLeftoverPreview';
+    const compressed = compressImage(e.target.result, 800, 0.7, function(dataUrl) {
+      if (isLeftover) {
+        canPhotoData.leftover = dataUrl;
+      } else {
+        canPhotoData.photo = dataUrl;
+      }
+      const el = document.getElementById(previewId);
+      el.classList.add('has-image');
+      el.innerHTML = `<img src="${dataUrl}">`;
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function compressImage(dataUrl, maxSize, quality, callback) {
+  const img = new Image();
+  img.onload = function() {
+    let w = img.width, h = img.height;
+    if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+    else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src = dataUrl;
+}
+
+function saveCanRecord() {
+  const date = document.getElementById('canFormDate').value;
+  const name = document.getElementById('canFormName').value.trim();
+  const grams = document.getElementById('canFormGrams').value;
+  const like = document.getElementById('canFormLike').value;
+  const note = document.getElementById('canFormNote').value.trim();
+
+  if (!date) {
+    showToast('请选择喂食日期');
+    return;
+  }
+
+  const data = getData();
+  if (!data.canRecords) data.canRecords = [];
+
+  data.canRecords.unshift({
+    id: Date.now(),
+    date: date,
+    name: name,
+    grams: grams ? parseFloat(grams) : null,
+    like: like,
+    note: note,
+    photo: canPhotoData.photo,
+    leftoverPhoto: canPhotoData.leftover,
+    createdAt: Date.now()
+  });
+
+  data.canRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  saveData(data);
+  closeCanForm();
+  renderCanPage();
+  showToast('记录已保存');
+}
+
+function deleteCanRecord(id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  const data = getData();
+  data.canRecords = (data.canRecords || []).filter(r => r.id !== id);
+  saveData(data);
+  renderCanPage();
+  showToast('已删除');
+}
+
+function viewPhoto(id, type) {
+  const data = getData();
+  const r = (data.canRecords || []).find(x => x.id == id);
+  if (!r) return;
+  const src = type === 'photo' ? r.photo : r.leftoverPhoto;
+  if (src) {
+    const w = window.open('', '_blank');
+    w.document.write(`<title>查看照片</title><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${src}" style="max-width:100%;max-height:100vh;"></body>`);
+  }
+}
+
+// ==================== 体重页面 ====================
+let weightPhotoData = '';
+
+function renderWeightPage() {
+  const data = getData();
+  const records = data.weightRecords || [];
+
+  document.getElementById('weightTotalRecords').textContent = `共 ${records.length} 条`;
+
+  if (records.length > 0) {
+    const latest = records[0];
+    document.getElementById('weightCurrent').textContent = latest.value + 'kg';
+    document.getElementById('weightLastDate').textContent = formatDate(latest.date);
+
+    if (records.length >= 2) {
+      const prev = records[1];
+      const diff = (latest.value - prev.value).toFixed(1);
+      const changeEl = document.getElementById('weightChange');
+      if (diff > 0) { changeEl.textContent = '+' + diff + 'kg ↗'; changeEl.style.color = '#2E7D32'; }
+      else if (diff < 0) { changeEl.textContent = diff + 'kg ↘'; changeEl.style.color = '#C62828'; }
+      else { changeEl.textContent = '不变'; changeEl.style.color = 'var(--text-muted)'; }
+    } else {
+      document.getElementById('weightChange').textContent = '首次记录';
+      document.getElementById('weightChange').style.color = 'var(--text-muted)';
+    }
+  } else {
+    document.getElementById('weightCurrent').textContent = '--';
+    document.getElementById('weightLastDate').textContent = '--';
+    document.getElementById('weightChange').textContent = '--';
+    document.getElementById('weightChange').style.color = '';
+  }
+
+  // 画趋势图
+  drawWeightChart(records);
+
+  document.getElementById('weightCount').textContent = `共 ${records.length} 条`;
+  const el = document.getElementById('weightTimeline');
+
+  if (records.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚖️</div>
+        <div class="empty-state-text">还没有体重记录<br>点击右上角 + 添加第一条记录</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = '<div class="wt-timeline">' + records.map((r, i) => {
+    let changeHtml = '';
+    if (i < records.length - 1) {
+      const prev = records[i + 1];
+      const diff = (r.value - prev.value).toFixed(1);
+      let cls = 'same', text = '不变';
+      if (diff > 0) { cls = 'up'; text = '+' + diff + ' ↗'; }
+      else if (diff < 0) { cls = 'down'; text = diff + ' ↘'; }
+      changeHtml = `<span class="wt-change ${cls}">${text}</span>`;
+    }
+
+    let photoHtml = '';
+    if (r.photo) {
+      photoHtml = `<img class="wt-photo" src="${r.photo}" onclick="viewWeightPhoto(${r.id})">`;
+    }
+
+    let noteHtml = '';
+    if (r.note) {
+      noteHtml = `<div class="wt-note">📝 ${r.note}</div>`;
+    }
+
+    return `
+      <div class="wt-item">
+        <div class="wt-dot"></div>
+        <div class="wt-row">
+          <div>
+            <div class="wt-date">${formatDateFull(r.date)}</div>
+            <div class="wt-value">${r.value}<span class="wt-value-unit"> kg</span></div>
+          </div>
+          ${changeHtml}
+        </div>
+        ${photoHtml}
+        ${noteHtml}
+        <div class="wt-actions">
+          <button class="btn-danger" onclick="deleteWeightRecord(${r.id})">删除</button>
+        </div>
+      </div>`;
+  }).join('') + '</div>';
+}
+
+function drawWeightChart(records) {
+  const card = document.getElementById('weightChartCard');
+  const canvas = document.getElementById('weightChart');
+  if (records.length < 2) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 140 * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = 140;
+
+  const last10 = records.slice(0, 10).reverse();
+  const vals = last10.map(r => r.value);
+  const minV = Math.min(...vals) - 0.3;
+  const maxV = Math.max(...vals) + 0.3;
+  const range = Math.max(maxV - minV, 0.5);
+  const pad = { t: 20, b: 24, l: 40, r: 16 };
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // 网格线
+  ctx.strokeStyle = '#F0DFC0'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 3; i++) {
+    const y = pad.t + (chartH / 3) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    const v = (maxV - (range / 3) * i).toFixed(1);
+    ctx.fillStyle = '#B8A08A'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(v, pad.l - 6, y + 3);
+  }
+
+  // 数据点
+  const pts = last10.map((r, i) => ({
+    x: pad.l + (chartW / (last10.length - 1)) * i,
+    y: pad.t + chartH - ((r.value - minV) / range) * chartH,
+    v: r.value
+  }));
+
+  // 渐变填充
+  const grad = ctx.createLinearGradient(0, pad.t, 0, H - pad.b);
+  grad.addColorStop(0, 'rgba(212,137,106,0.25)');
+  grad.addColorStop(1, 'rgba(212,137,106,0.02)');
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, H - pad.b);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length - 1].x, H - pad.b);
+  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+
+  // 折线
+  ctx.beginPath(); ctx.strokeStyle = '#D4896A'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.stroke();
+
+  // 圆点
+  pts.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#D4896A'; ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFF'; ctx.fill();
+  });
+}
+
+function openWeightForm() {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('weightFormDate').value = dateStr;
+  document.getElementById('weightFormValue').value = '';
+  document.getElementById('weightFormNote').value = '';
+  weightPhotoData = '';
+  resetPhotoPreview('weightPhotoPreview', '📷', '点击上传照片（可选）');
+  document.getElementById('weightModal').classList.add('active');
+}
+
+function closeWeightForm() {
+  document.getElementById('weightModal').classList.remove('active');
+}
+
+function previewWeightPhoto(input, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    compressImage(e.target.result, 800, 0.7, function(dataUrl) {
+      weightPhotoData = dataUrl;
+      const el = document.getElementById(previewId);
+      el.classList.add('has-image');
+      el.innerHTML = `<img src="${dataUrl}">`;
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveWeightRecord() {
+  const date = document.getElementById('weightFormDate').value;
+  const value = parseFloat(document.getElementById('weightFormValue').value);
+  const note = document.getElementById('weightFormNote').value.trim();
+
+  if (!date || isNaN(value)) {
+    showToast('请填写日期和体重');
+    return;
+  }
+
+  const data = getData();
+  if (!data.weightRecords) data.weightRecords = [];
+
+  data.weightRecords.unshift({
+    id: Date.now(), date, value, note, photo: weightPhotoData, createdAt: Date.now()
+  });
+
+  data.weightRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+  saveData(data);
+  closeWeightForm();
+  renderWeightPage();
+  showToast('记录已保存');
+}
+
+function deleteWeightRecord(id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  const data = getData();
+  data.weightRecords = (data.weightRecords || []).filter(r => r.id !== id);
+  saveData(data);
+  renderWeightPage();
+  showToast('已删除');
+}
+
+function viewWeightPhoto(id) {
+  const data = getData();
+  const r = (data.weightRecords || []).find(x => x.id == id);
+  if (!r || !r.photo) return;
+  const w = window.open('', '_blank');
+  w.document.write(`<title>查看照片</title><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${r.photo}" style="max-width:100%;max-height:100vh;"></body>`);
+}
+
+// ==================== 相册页面 ====================
+let currentViewPhotoId = null;
+
+function renderPhotosPage() {
+  const data = getData();
+  const photos = data.photos || [];
+  document.getElementById('photosTotal').textContent = `共 ${photos.length} 张`;
+  const grid = document.getElementById('photosGrid');
+
+  if (photos.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📷</div>
+        <div class="empty-state-text">还没有照片<br>点击右上角 + 上传小奶油的照片</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = '<div class="photo-grid">' + photos.map(p =>
+    `<div class="photo-grid-item" onclick="openPhotoViewer(${p.id})">
+      <img src="${p.data}" loading="lazy">
+    </div>`
+  ).join('') + '</div>';
+}
+
+function handlePhotoUpload(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  const data = getData();
+  if (!data.photos) data.photos = [];
+
+  let processed = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      compressImage(e.target.result, 1200, 0.75, function(dataUrl) {
+        data.photos.unshift({
+          id: Date.now() + Math.random(),
+          data: dataUrl,
+          date: new Date().toISOString(),
+          createdAt: Date.now()
+        });
+        processed++;
+        if (processed === files.length) {
+          saveData(data);
+          renderPhotosPage();
+          showToast(`已上传 ${files.length} 张照片`);
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  input.value = '';
+}
+
+function openPhotoViewer(id) {
+  currentViewPhotoId = id;
+  const data = getData();
+  const p = (data.photos || []).find(x => x.id == id);
+  if (!p) return;
+  document.getElementById('photoViewerImg').src = p.data;
+  const d = new Date(p.date);
+  document.getElementById('photoViewerDate').textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('photoViewer').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closePhotoViewer() {
+  document.getElementById('photoViewer').style.display = 'none';
+  document.body.style.overflow = '';
+  currentViewPhotoId = null;
+}
+
+function deletePhotoViewerPhoto() {
+  if (!currentViewPhotoId) return;
+  if (!confirm('确定删除这张照片吗？')) return;
+  const data = getData();
+  data.photos = (data.photos || []).filter(p => p.id != currentViewPhotoId);
+  saveData(data);
+  closePhotoViewer();
+  renderPhotosPage();
+  showToast('已删除');
+}
+
+// ==================== 安装提示 ====================
+function dismissInstallTip() {
+  document.getElementById('installTip').classList.remove('active');
+  localStorage.setItem('catDiaryInstallDismissed', '1');
+}
+
+function checkInstallTip() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  const dismissed = localStorage.getItem('catDiaryInstallDismissed');
+  if (isIOS && !isStandalone && !dismissed) {
+    setTimeout(() => {
+      document.getElementById('installTip').classList.add('active');
+    }, 2000);
+  }
+}
+
+// ==================== Service Worker ====================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ==================== 初始化 ====================
+renderHome();
+checkInstallTip();
+
+// 点击模态框外部关闭
+document.getElementById('sandModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSandForm();
+});
+document.getElementById('dewormModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDewormForm();
+});
+document.getElementById('hairballModal').addEventListener('click', function(e) {
+  if (e.target === this) closeHairballForm();
+});
+document.getElementById('canModal').addEventListener('click', function(e) {
+  if (e.target === this) closeCanForm();
+});
+document.getElementById('weightModal').addEventListener('click', function(e) {
+  if (e.target === this) closeWeightForm();
+});
+</script>
+</body>
+</html>
