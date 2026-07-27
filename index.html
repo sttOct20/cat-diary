@@ -2060,7 +2060,7 @@ function checkInstallTip() {
 
 // ==================== Service Worker ====================
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
 // ==================== 初始化 ====================

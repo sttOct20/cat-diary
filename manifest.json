@@ -2,7 +2,7 @@
   "name": "猫咪日记",
   "short_name": "猫咪日记",
   "description": "记录猫咪日常生活的贴心助手",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#FFF5E6",
   "theme_color": "#D4896A",

@@ -1,7 +1,7 @@
-const CACHE_NAME = 'cat-diary-v1';
+const CACHE_NAME = 'cat-diary-v2';
 const urlsToCache = [
-  '/',
-  '/index.html'
+  './',
+  './index.html'
 ];
 
 self.addEventListener('install', event => {
@@ -26,7 +26,7 @@ self.addEventListener('fetch', event => {
       if (response) return response;
       return fetch(event.request).catch(() => {
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match('./index.html');
         }
       });
     })
