@@ -544,6 +544,25 @@
         <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="photosCount">记录小奶油的可爱瞬间</div>
       </div>
     </div>
+
+    <!-- 数据备份 -->
+    <div style="background: linear-gradient(135deg, #E8F5E9, #C8E6C9); border-radius: var(--radius); padding: 18px; margin-top: 12px;">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+        <div style="width: 56px; height: 56px; border-radius: 12px; background: var(--white); display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: var(--shadow-soft);">💾</div>
+        <div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">数据备份</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">防止数据丢失，定期备份</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="exportData()" style="flex:1; padding: 10px; background: var(--calico-orange); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">📤 导出备份</button>
+        <button onclick="document.getElementById('importFileInput').click()" style="flex:1; padding: 10px; background: var(--white); color: var(--calico-orange); border: 1.5px solid var(--calico-orange); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">📥 导入恢复</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.5;">
+        💡 建议：每次添加重要记录后，点击「导出备份」保存到手机文件中。换手机或数据丢失时，用「导入恢复」即可恢复。
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1059,6 +1078,61 @@ function showToast(msg) {
     toast.style.opacity = '0';
     toast.style.transform = 'translate(-50%, -50%) scale(0.9)';
   }, 1800);
+}
+
+// ==================== 数据备份与恢复 ====================
+function exportData() {
+  const data = getData();
+  const exportObj = {
+    ...data,
+    exportDate: new Date().toISOString(),
+    version: '1.0'
+  };
+  const json = JSON.stringify(exportObj, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  a.href = url;
+  a.download = `猫咪日记备份_${dateStr}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('备份文件已下载，请保存到安全位置');
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.catName && !imported.sandRecords && !imported.weightRecords) {
+        showToast('文件格式不正确');
+        return;
+      }
+      if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) return;
+      const data = {
+        catName: imported.catName || '小奶油',
+        sandRecords: imported.sandRecords || [],
+        dewormRecords: imported.dewormRecords || [],
+        hairballRecords: imported.hairballRecords || [],
+        canRecords: imported.canRecords || [],
+        weightRecords: imported.weightRecords || [],
+        photos: imported.photos || []
+      };
+      saveData(data);
+      renderHome();
+      showToast('数据恢复成功');
+    } catch(err) {
+      showToast('文件解析失败，请检查文件');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ==================== 首页 ====================

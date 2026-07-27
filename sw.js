@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cat-diary-v3';
+const CACHE_NAME = 'cat-diary-v4';
 const urlsToCache = [
   './',
   './index.html'
