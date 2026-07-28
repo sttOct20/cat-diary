@@ -995,14 +995,15 @@
 <div id="toast"></div>
 
 <script>
-// ==================== 数据存储 ====================
+// ==================== 数据存储 (IndexedDB) ====================
 const STORAGE_KEY = 'catDiaryData';
+const DB_NAME = 'catDiaryDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'appData';
+let _dataCache = null;
+let _db = null;
 
-function getData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch(e) {}
+function getDefaultData() {
   return {
     catName: '小奶油',
     sandRecords: [],
@@ -1014,8 +1015,86 @@ function getData() {
   };
 }
 
+function idbGet(key) {
+  return new Promise((resolve, reject) => {
+    const tx = _db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function idbPut(key, value) {
+  return new Promise((resolve, reject) => {
+    const tx = _db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.put(value, key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    req.onsuccess = (e) => {
+      _db = e.target.result;
+      resolve();
+    };
+    req.onerror = (e) => {
+      console.error('IndexedDB 打开失败:', e);
+      reject(e);
+    };
+  }).then(async () => {
+    try {
+      const data = await idbGet('mainData');
+      if (data) {
+        _dataCache = data;
+      } else {
+        // 从 localStorage 迁移旧数据
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            _dataCache = JSON.parse(raw);
+            await idbPut('mainData', _dataCache);
+            localStorage.removeItem(STORAGE_KEY);
+          } else {
+            _dataCache = getDefaultData();
+            await idbPut('mainData', _dataCache);
+          }
+        } catch(e) {
+          _dataCache = getDefaultData();
+          await idbPut('mainData', _dataCache);
+        }
+      }
+    } catch(e) {
+      _dataCache = getDefaultData();
+    }
+  });
+}
+
+function getData() {
+  if (_dataCache) return _dataCache;
+  // 兼容：IndexedDB 未就绪时回退 localStorage
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return getDefaultData();
+}
+
 function saveData(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  _dataCache = data;
+  if (_db) {
+    idbPut('mainData', data).catch(e => console.error('IndexedDB 保存失败:', e));
+  }
 }
 
 // ==================== 路由 ====================
@@ -2193,8 +2272,15 @@ if ('serviceWorker' in navigator) {
 }
 
 // ==================== 初始化 ====================
-renderHome();
-checkInstallTip();
+(async function() {
+  try {
+    await initDB();
+  } catch(e) {
+    console.error('IndexedDB 初始化失败，回退到 localStorage:', e);
+  }
+  renderHome();
+  checkInstallTip();
+})();
 
 // 点击模态框外部关闭
 document.getElementById('sandModal').addEventListener('click', function(e) {
