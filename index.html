@@ -591,7 +591,10 @@
   <!-- 顶部简洁栏 -->
   <div class="home-top-bar">
     <span class="home-brand">🐾 猫咪日记</span>
-    <span class="home-date" id="homeDate"></span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="home-date" id="syncStatus" style="font-size:11px;">同步中...</span>
+      <span class="home-date" id="homeDate"></span>
+    </div>
   </div>
 
   <!-- 问候语 -->
@@ -1096,13 +1099,16 @@
 <div id="toast"></div>
 
 <script>
-// ==================== 数据存储 (IndexedDB) ====================
+// ==================== 数据存储 (IndexedDB + Vercel KV 云端同步) ====================
 const STORAGE_KEY = 'catDiaryData';
 const DB_NAME = 'catDiaryDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'appData';
 let _dataCache = null;
 let _db = null;
+let _deviceId = null;
+let _syncTimer = null;
+let _syncStatus = 'idle'; // idle, syncing, error
 
 function getDefaultData() {
   return {
@@ -1116,6 +1122,19 @@ function getDefaultData() {
   };
 }
 
+// ========== 设备 ID ==========
+function getDeviceId() {
+  if (_deviceId) return _deviceId;
+  let id = localStorage.getItem('catDiaryDeviceId');
+  if (!id) {
+    id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('catDiaryDeviceId', id);
+  }
+  _deviceId = id;
+  return id;
+}
+
+// ========== IndexedDB (本地离线缓存) ==========
 function idbGet(key) {
   return new Promise((resolve, reject) => {
     const tx = _db.transaction(STORE_NAME, 'readonly');
@@ -1159,7 +1178,6 @@ function initDB() {
       if (data) {
         _dataCache = data;
       } else {
-        // 从 localStorage 迁移旧数据
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
@@ -1181,9 +1199,114 @@ function initDB() {
   });
 }
 
+// ========== 云端 API ==========
+const API_BASE = '/api';
+
+async function fetchDataFromCloud() {
+  try {
+    const res = await fetch(`${API_BASE}/data`, {
+      headers: { 'x-device-id': getDeviceId() }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } catch(e) {
+    console.warn('从云端获取数据失败:', e);
+    return null;
+  }
+}
+
+async function saveDataToCloud(data) {
+  try {
+    const res = await fetch(`${API_BASE}/data`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-device-id': getDeviceId()
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return true;
+  } catch(e) {
+    console.warn('同步到云端失败:', e);
+    return false;
+  }
+}
+
+async function uploadPhotoToCloud(base64Data, filename) {
+  try {
+    // 去掉 data:image/xxx;base64, 前缀
+    const base64 = base64Data.split(',')[1] || base64Data;
+    const res = await fetch(`${API_BASE}/photo-upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-device-id': getDeviceId()
+      },
+      body: JSON.stringify({
+        filename: filename || `photo-${Date.now()}.jpg`,
+        data: base64,
+        contentType: 'image/jpeg'
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const result = await res.json();
+    return result.url;
+  } catch(e) {
+    console.error('照片上传云端失败:', e);
+    return null;
+  }
+}
+
+async function deletePhotoFromCloud(url) {
+  if (!url || url.startsWith('data:')) return true; // base64 或本地数据不需要删云端
+  try {
+    const res = await fetch(`${API_BASE}/photo-delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-device-id': getDeviceId()
+      },
+      body: JSON.stringify({ url })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return true;
+  } catch(e) {
+    console.warn('云端照片删除失败:', e);
+    return false;
+  }
+}
+
+// ========== 同步状态 ==========
+function setSyncStatus(status) {
+  _syncStatus = status;
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  if (status === 'syncing') {
+    el.textContent = '同步中...';
+    el.style.color = 'var(--text-muted)';
+  } else if (status === 'error') {
+    el.textContent = '同步失败';
+    el.style.color = 'var(--danger)';
+  } else {
+    el.textContent = '已同步';
+    el.style.color = 'var(--success)';
+  }
+}
+
+function scheduleCloudSync() {
+  if (_syncTimer) clearTimeout(_syncTimer);
+  setSyncStatus('syncing');
+  _syncTimer = setTimeout(async () => {
+    if (!_dataCache) return;
+    const ok = await saveDataToCloud(_dataCache);
+    setSyncStatus(ok ? 'idle' : 'error');
+  }, 800);
+}
+
+// ========== 公共接口 ==========
 function getData() {
   if (_dataCache) return _dataCache;
-  // 兼容：IndexedDB 未就绪时回退 localStorage
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -1193,9 +1316,12 @@ function getData() {
 
 function saveData(data) {
   _dataCache = data;
+  // 保存到本地 IndexedDB
   if (_db) {
     idbPut('mainData', data).catch(e => console.error('IndexedDB 保存失败:', e));
   }
+  // 异步同步到云端（防抖）
+  scheduleCloudSync();
 }
 
 // ==================== 路由 ====================
@@ -1945,7 +2071,7 @@ function compressImage(dataUrl, maxSize, quality, callback) {
   img.src = dataUrl;
 }
 
-function saveCanRecord() {
+async function saveCanRecord() {
   const date = document.getElementById('canFormDate').value;
   const name = document.getElementById('canFormName').value.trim();
   const grams = document.getElementById('canFormGrams').value;
@@ -1960,8 +2086,10 @@ function saveCanRecord() {
   const data = getData();
   if (!data.canRecords) data.canRecords = [];
 
+  // 先保存（含 base64 照片），保证立即显示
+  const recordId = Date.now();
   data.canRecords.unshift({
-    id: Date.now(),
+    id: recordId,
     date: date,
     name: name,
     grams: grams ? parseFloat(grams) : null,
@@ -1978,15 +2106,38 @@ function saveCanRecord() {
   closeCanForm();
   renderCanPage();
   showToast('记录已保存');
+
+  // 异步上传照片到云端
+  const record = data.canRecords.find(r => r.id === recordId);
+  if (!record) return;
+  let updated = false;
+  if (record.photo && record.photo.startsWith('data:')) {
+    const url = await uploadPhotoToCloud(record.photo, `can-${recordId}.jpg`);
+    if (url) { record.photo = url; updated = true; }
+  }
+  if (record.leftoverPhoto && record.leftoverPhoto.startsWith('data:')) {
+    const url = await uploadPhotoToCloud(record.leftoverPhoto, `can-${recordId}-leftover.jpg`);
+    if (url) { record.leftoverPhoto = url; updated = true; }
+  }
+  if (updated) {
+    saveData(data);
+    renderCanPage();
+  }
 }
 
 function deleteCanRecord(id) {
   if (!confirm('确定删除这条记录吗？')) return;
   const data = getData();
+  const record = (data.canRecords || []).find(r => r.id === id);
   data.canRecords = (data.canRecords || []).filter(r => r.id !== id);
   saveData(data);
   renderCanPage();
   showToast('已删除');
+  // 异步删除云端照片
+  if (record) {
+    if (record.photo && !record.photo.startsWith('data:')) deletePhotoFromCloud(record.photo);
+    if (record.leftoverPhoto && !record.leftoverPhoto.startsWith('data:')) deletePhotoFromCloud(record.leftoverPhoto);
+  }
 }
 
 function viewPhoto(id, type) {
@@ -2208,7 +2359,7 @@ function previewWeightPhoto(input, previewId) {
   reader.readAsDataURL(file);
 }
 
-function saveWeightRecord() {
+async function saveWeightRecord() {
   const date = document.getElementById('weightFormDate').value;
   const value = parseFloat(document.getElementById('weightFormValue').value);
   const note = document.getElementById('weightFormNote').value.trim();
@@ -2224,19 +2375,30 @@ function saveWeightRecord() {
   if (editingWeightId) {
     const r = data.weightRecords.find(x => x.id == editingWeightId);
     if (r) {
+      const oldPhoto = r.photo;
       r.date = date;
       r.value = value;
       r.note = note;
       r.photo = weightPhotoData;
+      // 如果旧照片是云端的且被替换，先删旧的
+      if (oldPhoto && !oldPhoto.startsWith('data:') && weightPhotoData && weightPhotoData !== oldPhoto) {
+        deletePhotoFromCloud(oldPhoto);
+      }
     }
     data.weightRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
     saveData(data);
     closeWeightForm();
     renderWeightPage();
     showToast('记录已更新');
+    // 异步上传新照片
+    if (r && r.photo && r.photo.startsWith('data:')) {
+      const url = await uploadPhotoToCloud(r.photo, `weight-${r.id}.jpg`);
+      if (url) { r.photo = url; saveData(data); renderWeightPage(); }
+    }
   } else {
+    const recordId = Date.now();
     data.weightRecords.unshift({
-      id: Date.now(), date, value, note, photo: weightPhotoData, createdAt: Date.now()
+      id: recordId, date, value, note, photo: weightPhotoData, createdAt: Date.now()
     });
 
     data.weightRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -2244,16 +2406,28 @@ function saveWeightRecord() {
     closeWeightForm();
     renderWeightPage();
     showToast('记录已保存');
+
+    // 异步上传照片到云端
+    const record = data.weightRecords.find(r => r.id === recordId);
+    if (record && record.photo && record.photo.startsWith('data:')) {
+      const url = await uploadPhotoToCloud(record.photo, `weight-${recordId}.jpg`);
+      if (url) { record.photo = url; saveData(data); renderWeightPage(); }
+    }
   }
 }
 
 function deleteWeightRecord(id) {
   if (!confirm('确定删除这条记录吗？')) return;
   const data = getData();
+  const record = (data.weightRecords || []).find(r => r.id === id);
   data.weightRecords = (data.weightRecords || []).filter(r => r.id !== id);
   saveData(data);
   renderWeightPage();
   showToast('已删除');
+  // 异步删除云端照片
+  if (record && record.photo && !record.photo.startsWith('data:')) {
+    deletePhotoFromCloud(record.photo);
+  }
 }
 
 function viewWeightPhoto(id) {
@@ -2301,21 +2475,46 @@ function handlePhotoUpload(input) {
   if (!data.photos) data.photos = [];
 
   let processed = 0;
-  files.forEach(file => {
+  let uploaded = 0;
+  showToast(`正在上传 ${files.length} 张照片...`);
+
+  files.forEach((file, idx) => {
     const reader = new FileReader();
     reader.onload = function(e) {
       compressImage(e.target.result, 1200, 0.75, function(dataUrl) {
+        // 先添加到本地（base64），保证立即显示
+        const photoId = Date.now() + Math.random() + idx;
         data.photos.unshift({
-          id: Date.now() + Math.random(),
+          id: photoId,
           data: dataUrl,
           date: new Date().toISOString(),
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          uploading: true
         });
+        renderPhotosPage();
+
+        // 异步上传到云端
+        uploadPhotoToCloud(dataUrl, file.name || `photo-${idx}.jpg`).then(cloudUrl => {
+          const p = data.photos.find(x => x.id === photoId);
+          if (p) {
+            if (cloudUrl) {
+              p.data = cloudUrl; // 替换为云端 URL
+              p.uploading = false;
+            } else {
+              p.uploading = false; // 上传失败，保留 base64 本地数据
+            }
+            saveData(data);
+            renderPhotosPage();
+          }
+          uploaded++;
+          if (uploaded === files.length) {
+            showToast(`已上传 ${files.length} 张照片`);
+          }
+        });
+
         processed++;
         if (processed === files.length) {
           saveData(data);
-          renderPhotosPage();
-          showToast(`已上传 ${files.length} 张照片`);
         }
       });
     };
@@ -2347,11 +2546,16 @@ function deletePhotoViewerPhoto() {
   if (!currentViewPhotoId) return;
   if (!confirm('确定删除这张照片吗？')) return;
   const data = getData();
+  const photo = (data.photos || []).find(p => p.id == currentViewPhotoId);
   data.photos = (data.photos || []).filter(p => p.id != currentViewPhotoId);
   saveData(data);
   closePhotoViewer();
   renderPhotosPage();
   showToast('已删除');
+  // 异步删除云端照片
+  if (photo && photo.data && !photo.data.startsWith('data:')) {
+    deletePhotoFromCloud(photo.data);
+  }
 }
 
 // ==================== 安装提示 ====================
@@ -2442,13 +2646,44 @@ if ('serviceWorker' in navigator) {
 
 // ==================== 初始化 ====================
 (async function() {
+  setSyncStatus('syncing');
   try {
     await initDB();
   } catch(e) {
     console.error('IndexedDB 初始化失败，回退到 localStorage:', e);
   }
+  // 先渲染本地数据（秒开）
   renderHome();
   checkInstallTip();
+
+  // 后台从云端拉取最新数据
+  const cloudData = await fetchDataFromCloud();
+  if (cloudData) {
+    const localData = getData();
+    // 比较更新时间，用较新的那个（用 createdAt 最大的记录作为参考）
+    const localLatest = Math.max(
+      (localData.sandRecords || [])[0]?.createdAt || 0,
+      (localData.weightRecords || [])[0]?.createdAt || 0,
+      (localData.photos || [])[0]?.createdAt || 0
+    );
+    const cloudLatest = Math.max(
+      (cloudData.sandRecords || [])[0]?.createdAt || 0,
+      (cloudData.weightRecords || [])[0]?.createdAt || 0,
+      (cloudData.photos || [])[0]?.createdAt || 0
+    );
+    // 如果云端数据更新，用云端覆盖本地
+    if (cloudLatest > localLatest + 1000) {
+      _dataCache = cloudData;
+      if (_db) idbPut('mainData', cloudData).catch(() => {});
+      renderHome();
+    } else if (localLatest > cloudLatest + 1000) {
+      // 本地数据更新，同步到云端
+      scheduleCloudSync();
+    }
+    setSyncStatus('idle');
+  } else {
+    setSyncStatus('error');
+  }
 })();
 
 // 点击模态框外部关闭
