@@ -1,9 +1,8 @@
 {
   "name": "cat-diary",
   "version": "2.0.0",
-  "description": "猫咪日记 - 云端版本",
+  "description": "猫咪日记 - Vercel Blob 云端版",
   "dependencies": {
-    "@vercel/kv": "^1.0.1",
     "@vercel/blob": "^0.23.4"
   }
 }
