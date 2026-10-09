@@ -647,27 +647,6 @@
       <span class="menu-card-hint" id="photosHint">可爱瞬间</span>
     </div>
   </div>
-
-  <!-- 数据备份 -->
-  <div style="padding: 0 16px 16px;">
-    <div style="background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-soft);">
-      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
-        <div style="width: 48px; height: 48px; border-radius: 12px; background: var(--bg-warm); display: flex; align-items: center; justify-content: center; font-size: 24px;">💾</div>
-        <div>
-          <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">数据备份</div>
-          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">防止数据丢失，定期备份</div>
-        </div>
-      </div>
-      <div style="display: flex; gap: 8px;">
-        <button onclick="exportData()" style="flex:1; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">📤 导出备份</button>
-        <button onclick="document.getElementById('importFileInput').click()" style="flex:1; padding: 10px; background: var(--bg-warm); color: var(--primary); border: 1.5px solid var(--bg-border); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">📥 导入恢复</button>
-        <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importData(this)">
-      </div>
-      <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.5;">
-        💡 建议：每次添加重要记录后，点击「导出备份」保存到手机文件中。换手机或数据丢失时，用「导入恢复」即可恢复。
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- ==================== 换猫砂页面 ==================== -->
@@ -1336,7 +1315,6 @@ function navigateTo(page) {
   if (page === 'weight') renderWeightPage();
   if (page === 'photos') renderPhotosPage();
   updateTabBar(page);
-  updateFab(page);
 }
 
 function goHome() {
@@ -1345,7 +1323,6 @@ function goHome() {
   window.scrollTo(0, 0);
   renderHome();
   updateTabBar('home');
-  updateFab('home');
 }
 
 // ==================== 工具函数 ====================
@@ -2575,23 +2552,13 @@ function checkInstallTip() {
   }
 }
 
-// ==================== TabBar & FAB ====================
+// ==================== TabBar ====================
 function switchTab(tab) {
   if (tab === 'home') {
     goHome();
-  } else if (tab === 'reminder') {
-    goHome();
-    // 滚动到提醒区域（横幅位置）
-    setTimeout(() => {
-      const banner = document.querySelector('.home-banner');
-      if (banner) banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
   } else if (tab === 'weight') {
     navigateTo('weight');
-  } else if (tab === 'account') {
-    goHome();
-    showToast('记账功能即将上线');
-  } else if (tab === 'store') {
+  } else if (tab === 'photos') {
     navigateTo('photos');
   }
 }
@@ -2603,11 +2570,8 @@ function updateTabBar(page) {
     'deworm': 'home',
     'hairball': 'home',
     'can': 'home',
-    'reminder': 'reminder',
     'weight': 'weight',
-    'account': 'account',
-    'photos': 'store',
-    'store': 'store'
+    'photos': 'photos',
   };
   const target = map[page] || 'home';
   document.querySelectorAll('.tab-item').forEach(item => {
@@ -2617,26 +2581,6 @@ function updateTabBar(page) {
       item.classList.remove('active');
     }
   });
-}
-
-function updateFab(page) {
-  const fab = document.getElementById('fabBtn');
-  const pagesWithFab = ['sand', 'deworm', 'hairball', 'can', 'weight'];
-  if (pagesWithFab.includes(page)) {
-    fab.classList.remove('hidden');
-    fab.dataset.page = page;
-  } else {
-    fab.classList.add('hidden');
-  }
-}
-
-function handleFabClick() {
-  const page = document.getElementById('fabBtn').dataset.page;
-  if (page === 'sand') openSandForm();
-  else if (page === 'deworm') openDewormForm();
-  else if (page === 'hairball') openHairballForm();
-  else if (page === 'can') openCanForm();
-  else if (page === 'weight') openWeightForm();
 }
 
 // ==================== Service Worker ====================
@@ -2709,26 +2653,15 @@ document.getElementById('weightModal').addEventListener('click', function(e) {
     <span class="tab-icon">🏠</span>
     <span class="tab-label">记录</span>
   </div>
-  <div class="tab-item" data-page="reminder" onclick="switchTab('reminder')">
-    <span class="tab-icon">🔔</span>
-    <span class="tab-label">提醒</span>
-  </div>
   <div class="tab-item" data-page="weight" onclick="switchTab('weight')">
     <span class="tab-icon">⚖️</span>
     <span class="tab-label">体重</span>
   </div>
-  <div class="tab-item" data-page="account" onclick="switchTab('account')">
-    <span class="tab-icon">💰</span>
-    <span class="tab-label">记账</span>
-  </div>
-  <div class="tab-item" data-page="store" onclick="switchTab('store')">
-    <span class="tab-icon">📦</span>
-    <span class="tab-label">仓库</span>
+  <div class="tab-item" data-page="photos" onclick="switchTab('photos')">
+    <span class="tab-icon">📷</span>
+    <span class="tab-label">照片</span>
   </div>
 </div>
-
-<!-- 悬浮添加按钮 -->
-<button class="fab hidden" id="fabBtn" onclick="handleFabClick()">+</button>
 
 </body>
 </html>
